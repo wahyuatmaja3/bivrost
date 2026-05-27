@@ -12,7 +12,7 @@ import { stdin as input, stdout as output } from "node:process";
 
 const app = express();
 const PORT = Number(process.env.PORT || 5000);
-const PUBLIC_DIR = path.join(__dirname, "public");
+const PUBLIC_DIR = path.resolve(__dirname, "..", "src", "public");
 const THUMB_DIR = path.join(os.tmpdir(), "bivrost-thumbs");
 
 const VIDEO_EXTENSIONS = new Set([".mp4", ".mkv", ".avi", ".mov", ".webm"]);
@@ -84,12 +84,33 @@ function createCacheKey(relativePath: string) {
   return Buffer.from(relativePath).toString("base64url");
 }
 
+
 type AppState = {
   rootDir: string;
   rootName: string;
 };
 
+function getRootFromArgs(): string | null {
+  const arg = process.argv[2];
+  if (arg) {
+    return path.resolve(arg);
+  }
+  return null;
+}
+
 async function promptRootDirectory(): Promise<AppState> {
+  const fromArg = getRootFromArgs();
+  if (fromArg) {
+    try {
+      const stat = await fsp.stat(fromArg);
+      if (!stat.isDirectory()) {
+        throw new Error("Path harus berupa folder.");
+      }
+      return { rootDir: fromArg, rootName: path.basename(fromArg) };
+    } catch (e) {
+      console.error("Argument path tidak valid, akan meminta input manual.");
+    }
+  }
   const rl = readline.createInterface({ input, output });
 
   try {
@@ -149,8 +170,8 @@ function installRoutes(state: AppState) {
               relativePath,
               extension,
               type,
-              thumbnailUrl: type === "image" ? `/api/file/${encodedPath}` : `/api/thumbnail/${encodedPath}`,
-              streamUrl: type === "image" ? `/api/file/${encodedPath}` : `/api/stream/${encodedPath}`,
+              thumbnailUrl: type === "image" ? `/api/file?path=${encodedPath}` : `/api/thumbnail?path=${encodedPath}`,
+              streamUrl: type === "image" ? `/api/file?path=${encodedPath}` : `/api/stream?path=${encodedPath}`,
             };
           })
           .filter((item): item is NonNullable<typeof item> => Boolean(item)),
@@ -167,9 +188,9 @@ function installRoutes(state: AppState) {
     }
   });
 
-  app.get("/api/file/:relativePath(*)", async (req, res) => {
+  app.get("/api/file", async (req, res) => {
     try {
-      const relativePath = decodeURIComponent(req.params.relativePath);
+      const relativePath = typeof req.query.path === "string" ? decodeURIComponent(req.query.path) : "";
       const filePath = resolveSafePath(state.rootDir, relativePath);
       const extension = path.extname(filePath).toLowerCase();
       if (!IMAGE_EXTENSIONS.has(extension)) {
@@ -185,9 +206,9 @@ function installRoutes(state: AppState) {
     }
   });
 
-  app.get("/api/thumbnail/:relativePath(*)", async (req, res) => {
+  app.get("/api/thumbnail", async (req, res) => {
     try {
-      const relativePath = decodeURIComponent(req.params.relativePath);
+      const relativePath = typeof req.query.path === "string" ? decodeURIComponent(req.query.path) : "";
       const filePath = resolveSafePath(state.rootDir, relativePath);
       const extension = path.extname(filePath).toLowerCase();
       if (!VIDEO_EXTENSIONS.has(extension)) {
@@ -204,9 +225,9 @@ function installRoutes(state: AppState) {
     }
   });
 
-  app.get("/api/stream/:relativePath(*)", async (req, res) => {
+  app.get("/api/stream", async (req, res) => {
     try {
-      const relativePath = decodeURIComponent(req.params.relativePath);
+      const relativePath = typeof req.query.path === "string" ? decodeURIComponent(req.query.path) : "";
       const filePath = resolveSafePath(state.rootDir, relativePath);
       const extension = path.extname(filePath).toLowerCase();
       if (!VIDEO_EXTENSIONS.has(extension)) {
