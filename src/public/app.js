@@ -5,6 +5,8 @@ const state = {
   folders: [],
   media: [],
   currentVideoIndex: -1,
+  searchQuery: "",
+  searchResults: [],
 };
 
 const elements = {
@@ -13,6 +15,7 @@ const elements = {
   grid: document.getElementById("grid"),
   breadcrumbs: document.getElementById("breadcrumbs"),
   upButton: document.getElementById("up-button"),
+  searchInput: document.getElementById("search-input"),
   lightbox: document.getElementById("lightbox"),
   lightboxImage: document.getElementById("lightbox-image"),
   folderTemplate: document.getElementById("folder-card-template"),
@@ -138,15 +141,34 @@ function closePlayer() {
   video.load();
 }
 
+function createSearchResultCard(item) {
+  if (item.type === "folder") {
+    return createFolderCard(item);
+  }
+
+  const node = elements.folderTemplate.content.firstElementChild.cloneNode(true);
+  node.querySelector(".thumb").textContent = "📄";
+  node.querySelector(".card-title").textContent = item.name;
+  node.querySelector(".card-meta").textContent = "File";
+  return node;
+}
+
 function renderBrowser() {
   elements.title.textContent = `Media Browser ${formatPath(state.currentPath)}`;
   elements.upButton.disabled = !state.currentPath;
   renderBreadcrumbs();
   clearGrid();
 
-  const items = [...state.folders.map(createFolderCard), ...state.media.map(createMediaCard)];
+  const items = state.searchQuery
+    ? state.searchResults.map(createSearchResultCard)
+    : [...state.folders.map(createFolderCard), ...state.media.map(createMediaCard)];
+
   if (!items.length) {
-    renderEmpty("This folder does not contain any supported media yet.");
+    renderEmpty(
+      state.searchQuery
+        ? "No matching files or folders in this location."
+        : "This folder does not contain any supported media yet.",
+    );
     return;
   }
 
@@ -161,6 +183,30 @@ function stepVideo(delta) {
   openVideo(nextIndex);
 }
 
+async function searchEntries(queryText) {
+  state.searchQuery = queryText.trim();
+  if (!state.searchQuery) {
+    state.searchResults = [];
+    setStatus(`${state.folders.length} folders, ${state.media.length} media items`);
+    renderBrowser();
+    return;
+  }
+
+  setStatus("Searching…");
+  try {
+    const params = new URLSearchParams();
+    params.set("path", state.currentPath);
+    params.set("q", state.searchQuery);
+    const data = await fetchJson(`/api/search?${params.toString()}`);
+    state.searchResults = data.results || [];
+    setStatus(`${state.searchResults.length} results`);
+    renderBrowser();
+  } catch (error) {
+    setStatus(error.message || "Search failed.");
+    renderEmpty("Unable to search this folder.");
+  }
+}
+
 async function loadDirectory(path = "") {
   setStatus("Loading media…");
   try {
@@ -171,6 +217,9 @@ async function loadDirectory(path = "") {
     state.folders = data.folders || [];
     state.media = (data.media || []).filter((item) => item.type === "image" || item.type === "video");
     state.view = "browser";
+    state.searchQuery = "";
+    state.searchResults = [];
+    elements.searchInput.value = "";
     setStatus(`${state.folders.length} folders, ${state.media.length} media items`);
     renderBrowser();
   } catch (error) {
@@ -184,6 +233,10 @@ elements.upButton.addEventListener("click", () => {
   const parts = state.currentPath.split("/").filter(Boolean);
   parts.pop();
   loadDirectory(parts.join("/"));
+});
+
+elements.searchInput.addEventListener("input", (event) => {
+  searchEntries(event.target.value);
 });
 
 elements.lightbox.addEventListener("click", (event) => {

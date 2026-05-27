@@ -276,6 +276,32 @@ function installRoutes(state: AppState) {
       res.status(404).end();
     }
   });
+
+  app.get("/api/search", async (req, res) => {
+    try {
+      const relativePath = typeof req.query.path === "string" ? decodeURIComponent(req.query.path) : "";
+      const query = typeof req.query.q === "string" ? req.query.q.trim().toLowerCase() : "";
+      const directoryPath = resolveSafePath(state.rootDir, relativePath);
+      const entries = await fsp.readdir(directoryPath, { withFileTypes: true });
+      const results = entries
+        .filter((entry) => entry.name.toLowerCase().includes(query))
+        .map((entry) => {
+          const rel = normalizeRelativePath(
+            path.relative(state.rootDir, path.join(directoryPath, entry.name)),
+          );
+          return {
+            name: entry.name,
+            relativePath: rel,
+            type: entry.isDirectory() ? "folder" : "file",
+          };
+        });
+      res.json({ results });
+    } catch (error) {
+      res
+        .status(400)
+        .json({ error: error instanceof Error ? error.message : "Search failed" });
+    }
+  });
 }
 
 async function start() {

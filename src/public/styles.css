@@ -73,6 +73,14 @@ h1 {
   padding: 14px 16px;
 }
 
+.toolbar-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+
 .status-card {
   margin-bottom: 16px;
   color: #cbd5e1;
@@ -82,6 +90,22 @@ h1 {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  flex: 1 1 320px;
+}
+
+.search-input {
+  flex: 0 1 320px;
+  width: min(100%, 320px);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 999px;
+  background: rgba(30, 41, 59, 0.95);
+  color: #f8fafc;
+  padding: 10px 14px;
+  outline: none;
+}
+
+.search-input::placeholder {
+  color: #94a3b8;
 }
 
 .crumb,

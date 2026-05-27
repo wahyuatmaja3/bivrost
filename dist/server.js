@@ -88,24 +88,24 @@ async function promptRootDirectory() {
         try {
             const stat = await promises_1.default.stat(fromArg);
             if (!stat.isDirectory()) {
-                throw new Error("Path harus berupa folder.");
+                throw new Error("Path must be a folder.");
             }
             return { rootDir: fromArg, rootName: node_path_1.default.basename(fromArg) };
         }
         catch (e) {
-            console.error("Argument path tidak valid, akan meminta input manual.");
+            console.error("Invalid argument path, switching to manual input.");
         }
     }
     const rl = promises_2.default.createInterface({ input: node_process_1.stdin, output: node_process_1.stdout });
     try {
-        const answer = (await rl.question("Masukkan path folder media yang akan di-share: ")).trim();
+        const answer = (await rl.question("Enter the media folder path to share: ")).trim();
         if (!answer) {
-            throw new Error("Path folder wajib diisi.");
+            throw new Error("A folder path is required.");
         }
         const rootDir = node_path_1.default.resolve(answer);
         const stat = await promises_1.default.stat(rootDir);
         if (!stat.isDirectory()) {
-            throw new Error("Path harus berupa folder.");
+            throw new Error("Path must be a folder.");
         }
         return {
             rootDir,
@@ -238,6 +238,30 @@ function installRoutes(state) {
         }
         catch {
             res.status(404).end();
+        }
+    });
+    app.get("/api/search", async (req, res) => {
+        try {
+            const relativePath = typeof req.query.path === "string" ? decodeURIComponent(req.query.path) : "";
+            const query = typeof req.query.q === "string" ? req.query.q.trim().toLowerCase() : "";
+            const directoryPath = resolveSafePath(state.rootDir, relativePath);
+            const entries = await promises_1.default.readdir(directoryPath, { withFileTypes: true });
+            const results = entries
+                .filter((entry) => entry.name.toLowerCase().includes(query))
+                .map((entry) => {
+                const rel = normalizeRelativePath(node_path_1.default.relative(state.rootDir, node_path_1.default.join(directoryPath, entry.name)));
+                return {
+                    name: entry.name,
+                    relativePath: rel,
+                    type: entry.isDirectory() ? "folder" : "file",
+                };
+            });
+            res.json({ results });
+        }
+        catch (error) {
+            res
+                .status(400)
+                .json({ error: error instanceof Error ? error.message : "Search failed" });
         }
     });
 }
