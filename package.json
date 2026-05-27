@@ -1,0 +1,30 @@
+{
+  "name": "bivrost",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+    "scripts": {
+        "build": "tsc",
+        "start": "node dist/server.js"
+    },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wahyuatmaja3/bivrost.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/wahyuatmaja3/bivrost/issues"
+  },
+  "homepage": "https://github.com/wahyuatmaja3/bivrost#readme",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "ffmpeg-static": "^5.3.0",
+    "fluent-ffmpeg": "^2.1.3",
+    "mime-types": "^3.0.2",
+    "typescript": "^6.0.3"
+  }
+}

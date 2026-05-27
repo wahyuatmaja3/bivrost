@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bivrost</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Bivrost</p>
+          <h1 id="page-title">Media Browser</h1>
+        </div>
+        <button id="up-button" class="ghost-button" type="button">Naik</button>
+      </header>
+
+      <section class="toolbar">
+        <div class="breadcrumbs" id="breadcrumbs"></div>
+      </section>
+
+      <main>
+        <section id="status" class="status-card">Memuat media…</section>
+        <section id="grid" class="media-grid"></section>
+      </main>
+    </div>
+
+    <dialog id="lightbox" class="lightbox">
+      <form method="dialog" class="lightbox-close-row">
+        <button class="icon-button" aria-label="Tutup">✕</button>
+      </form>
+      <img id="lightbox-image" alt="Preview gambar" />
+    </dialog>
+
+    <template id="folder-card-template">
+      <button class="card folder-card" type="button">
+        <div class="thumb placeholder">📁</div>
+        <div class="card-body">
+          <h2 class="card-title"></h2>
+          <p class="card-meta">Folder</p>
+        </div>
+      </button>
+    </template>
+
+    <template id="media-card-template">
+      <button class="card media-card" type="button">
+        <div class="thumb">
+          <img loading="lazy" alt="Thumbnail media" />
+          <span class="badge"></span>
+        </div>
+        <div class="card-body">
+          <h2 class="card-title"></h2>
+          <p class="card-meta"></p>
+        </div>
+      </button>
+    </template>
+
+    <script src="/app.js" defer></script>
+  </body>
+</html>
