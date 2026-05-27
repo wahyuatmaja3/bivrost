@@ -17,6 +17,7 @@ const elements = {
   lightboxImage: document.getElementById("lightbox-image"),
   folderTemplate: document.getElementById("folder-card-template"),
   mediaTemplate: document.getElementById("media-card-template"),
+  fullscreenVideo: document.getElementById("fullscreen-video"),
 };
 
 async function fetchJson(url) {
@@ -112,16 +113,29 @@ function openImage(item) {
   elements.lightbox.showModal();
 }
 
-function openVideo(index) {
-  state.view = "player";
+async function openVideo(index) {
+  const current = state.media[index];
+  if (!current) return;
   state.currentVideoIndex = index;
-  renderPlayer();
+  const video = elements.fullscreenVideo;
+  video.src = current.streamUrl;
+  video.style.display = "block";
+  try {
+    if (video.requestFullscreen) {
+      await video.requestFullscreen();
+    }
+  } catch {}
+  try {
+    await video.play();
+  } catch {}
 }
 
 function closePlayer() {
-  state.view = "browser";
-  state.currentVideoIndex = -1;
-  renderBrowser();
+  const video = elements.fullscreenVideo;
+  video.pause();
+  video.style.display = "none";
+  video.removeAttribute("src");
+  video.load();
 }
 
 function renderBrowser() {
@@ -139,41 +153,7 @@ function renderBrowser() {
   items.forEach((item) => elements.grid.appendChild(item));
 }
 
-function renderPlayer() {
-  const current = state.media[state.currentVideoIndex];
-  if (!current) {
-    closePlayer();
-    return;
-  }
-
-  elements.title.textContent = current.name;
-  elements.upButton.disabled = false;
-  renderBreadcrumbs();
-  clearGrid();
-
-  const shell = document.createElement("section");
-  shell.className = "player-shell";
-  shell.innerHTML = `
-    <div class="player-header">
-      <p class="eyebrow">Now Playing</p>
-      <h2 class="player-title">${current.name}</h2>
-      <p class="card-meta">${current.extension.toUpperCase()}</p>
-    </div>
-    <video class="player-video" controls playsinline preload="metadata" src="${current.streamUrl}"></video>
-    <div class="player-actions">
-      <button type="button" class="control-button" id="prev-video">Previous</button>
-      <button type="button" class="control-button" id="back-browser">Kembali</button>
-      <button type="button" class="control-button" id="next-video">Next</button>
-    </div>
-  `;
-
-  elements.grid.appendChild(shell);
-  shell.querySelector("#back-browser").addEventListener("click", closePlayer);
-  shell.querySelector("#prev-video").addEventListener("click", () => stepVideo(-1));
-  shell.querySelector("#next-video").addEventListener("click", () => stepVideo(1));
-  shell.querySelector("#prev-video").disabled = state.currentVideoIndex <= 0;
-  shell.querySelector("#next-video").disabled = state.currentVideoIndex >= state.media.length - 1;
-}
+function renderPlayer() {}
 
 function stepVideo(delta) {
   const nextIndex = state.currentVideoIndex + delta;
@@ -211,6 +191,13 @@ elements.lightbox.addEventListener("click", (event) => {
   const inDialog = rect.top <= event.clientY && event.clientY <= rect.bottom && rect.left <= event.clientX && event.clientX <= rect.right;
   if (!inDialog) {
     elements.lightbox.close();
+  }
+});
+
+elements.fullscreenVideo.addEventListener("ended", () => stepVideo(1));
+document.addEventListener("fullscreenchange", () => {
+  if (!document.fullscreenElement) {
+    closePlayer();
   }
 });
 
