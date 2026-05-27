@@ -104,25 +104,28 @@ async function promptRootDirectory(): Promise<AppState> {
     try {
       const stat = await fsp.stat(fromArg);
       if (!stat.isDirectory()) {
-        throw new Error("Path harus berupa folder.");
+          throw new Error("Path must be a folder.");
+
       }
       return { rootDir: fromArg, rootName: path.basename(fromArg) };
     } catch (e) {
-      console.error("Argument path tidak valid, akan meminta input manual.");
+      console.error("Invalid argument path, switching to manual input.");
     }
   }
   const rl = readline.createInterface({ input, output });
 
   try {
-    const answer = (await rl.question("Masukkan path folder media yang akan di-share: ")).trim();
+    const answer = (await rl.question("Enter the media folder path to share: ")).trim();
     if (!answer) {
-      throw new Error("Path folder wajib diisi.");
+        throw new Error("A folder path is required.");
+
     }
 
     const rootDir = path.resolve(answer);
     const stat = await fsp.stat(rootDir);
     if (!stat.isDirectory()) {
-      throw new Error("Path harus berupa folder.");
+        throw new Error("Path must be a folder.");
+
     }
 
     return {

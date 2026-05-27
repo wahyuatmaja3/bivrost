@@ -1,72 +1,72 @@
 # Bivrost
 
-Bivrost adalah aplikasi web sederhana untuk membagikan folder media melalui browser. Program ini menampilkan isi folder berupa video dan gambar, menyediakan thumbnail, serta memudahkan navigasi folder dan pemutaran media langsung dari jaringan lokal.
+Bivrost is a simple web application for sharing a media folder through a browser. It displays video and image files, generates thumbnails, and makes it easy to browse folders and play media over a local network.
 
-## Tujuan Program
+## Purpose
 
-Program ini dibuat untuk:
+This program is intended to:
 
-- membagikan folder media agar bisa diakses dari browser
-- menampilkan isi folder media dengan tampilan galeri
-- memutar video langsung tanpa perlu memindahkan file
-- melihat gambar langsung dari browser
-- memudahkan akses koleksi media dari perangkat lain dalam satu jaringan
+- share a media folder so it can be accessed from a browser
+- display media files in a gallery view
+- play videos directly without moving files
+- view images directly in the browser
+- make media collections easier to access from other devices on the same network
 
-## Cara Pasang
+## Installation
 
-### 1. Siapkan kebutuhan
-Pastikan sudah terpasang:
+### 1. Requirements
+Make sure these are installed:
 
 - Node.js
 - npm
 
-### 2. Unduh dependensi
-Jalankan perintah berikut di folder project:
+### 2. Install dependencies
+Run this command in the project folder:
 
 ```bash
 npm install
 ```
 
-## Cara Menjalankan
+## Run
 
-### Menjalankan aplikasi
-Jalankan:
+### Start the application
+Run:
 
 ```bash
 npm start
 ```
 
-Perintah ini akan membangun project lalu menjalankan server.
+This command builds the project and starts the server.
 
-### Menentukan folder media
-Saat program berjalan, Anda akan diminta memasukkan path folder media yang ingin dibagikan.
+### Choose the media folder
+When the program starts, you will be asked to enter the path of the media folder you want to share.
 
-Contoh:
+Example:
 
 ```bash
 D:\Media
 ```
 
-Atau bisa langsung menjalankan dengan argumen folder:
+Or run it directly with a folder argument:
 
 ```bash
 npm start -- "D:\Media"
 ```
 
-### Membuka dari browser
-Setelah server aktif, buka browser ke alamat:
+### Open in the browser
+After the server starts, open this address in a browser:
 
 ```text
 http://localhost:5000
 ```
 
-Jika ingin diakses dari perangkat lain dalam jaringan yang sama, gunakan alamat IP komputer yang menjalankan aplikasi, misalnya:
+To access it from another device on the same network, use the IP address of the computer running the app, for example:
 
 ```text
 http://192.168.1.10:5000
 ```
 
-## Format Media yang Didukung
+## Supported Media Formats
 
 ### Video
 
@@ -76,7 +76,7 @@ http://192.168.1.10:5000
 - .mov
 - .webm
 
-### Gambar
+### Images
 
 - .jpg
 - .jpeg

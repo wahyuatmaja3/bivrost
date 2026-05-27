@@ -146,7 +146,7 @@ function renderBrowser() {
 
   const items = [...state.folders.map(createFolderCard), ...state.media.map(createMediaCard)];
   if (!items.length) {
-    renderEmpty("Folder ini belum punya media yang didukung.");
+    renderEmpty("This folder does not contain any supported media yet.");
     return;
   }
 
@@ -162,7 +162,7 @@ function stepVideo(delta) {
 }
 
 async function loadDirectory(path = "") {
-  setStatus("Memuat media…");
+  setStatus("Loading media…");
   try {
     const query = buildQuery(path);
     const data = await fetchJson(`/api/browse${query ? `?${query}` : ""}`);
@@ -171,11 +171,11 @@ async function loadDirectory(path = "") {
     state.folders = data.folders || [];
     state.media = (data.media || []).filter((item) => item.type === "image" || item.type === "video");
     state.view = "browser";
-    setStatus(`${state.folders.length} folder, ${state.media.length} media`);
+    setStatus(`${state.folders.length} folders, ${state.media.length} media items`);
     renderBrowser();
   } catch (error) {
-    setStatus(error.message || "Gagal memuat media.");
-    renderEmpty("Tidak bisa memuat isi folder.");
+    setStatus(error.message || "Failed to load media.");
+    renderEmpty("Unable to load folder contents.");
   }
 }
 
