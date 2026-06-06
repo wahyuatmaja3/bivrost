@@ -1,85 +1,25 @@
-# Bivrost
+# 🕷 Bivrost
 
-Bivrost is a simple web application for sharing a media folder through a browser. It displays video and image files, generates thumbnails, and makes it easy to browse folders and play media over a local network.
+Bivrost is a lightweight, self-hosted web application designed to share and stream a local media folder directly through any web browser. It automatically generates thumbnails and provides a clean gallery interface, making it easy to browse and play your media collection across devices on your local network.
 
-## Purpose
+## 🚀 Features & Purpose
 
-This program is intended to:
+- **Network Sharing:** Easily share any local media folder with other devices on the same Wi-Fi/LAN.
+- **Gallery View:** Beautifully displays media files with automatically generated thumbnails.
+- **Instant Streaming:** Play videos and view images directly in the browser without downloading the files.
+- **Cross-Platform:** Access your media from smartphones, tablets, smart TVs, or other PCs via a web browser.
 
-- share a media folder so it can be accessed from a browser
-- display media files in a gallery view
-- play videos directly without moving files
-- view images directly in the browser
-- make media collections easier to access from other devices on the same network
+---
 
-## Installation
+## 🛠️ Installation
 
-### 1. Requirements
-Make sure these are installed:
+### 1. Prerequisites
+Ensure you have the following installed on your system:
+* **Node.js** (v14 or higher recommended)
+* **npm** (comes bundled with Node.js)
 
-- Node.js
-- npm
-
-### 2. Install dependencies
-Run this command in the project folder:
+### 2. Setup
+Clone this repository or download the source code, navigate to the project directory, and install the required dependencies:
 
 ```bash
 npm install
-```
-
-## Run
-
-### Start the application
-Run:
-
-```bash
-npm start
-```
-
-This command builds the project and starts the server.
-
-### Choose the media folder
-When the program starts, you will be asked to enter the path of the media folder you want to share.
-
-Example:
-
-```bash
-D:\Media
-```
-
-Or run it directly with a folder argument:
-
-```bash
-npm start -- "D:\Media"
-```
-
-### Open in the browser
-After the server starts, open this address in a browser:
-
-```text
-http://localhost:5000
-```
-
-To access it from another device on the same network, use the IP address of the computer running the app, for example:
-
-```text
-http://192.168.1.10:5000
-```
-
-## Supported Media Formats
-
-### Video
-
-- .mp4
-- .mkv
-- .avi
-- .mov
-- .webm
-
-### Images
-
-- .jpg
-- .jpeg
-- .png
-- .webp
-- .gif
