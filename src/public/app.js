@@ -110,16 +110,55 @@ function createMediaCard(item, index) {
   return node;
 }
 
+let mediaHistoryOpen = false;
+let tearingDownMedia = false;
+
+function pushMediaHistory() {
+  if (mediaHistoryOpen) return;
+  mediaHistoryOpen = true;
+  history.pushState({ media: true, path: state.currentPath }, "", location.href);
+}
+
+function teardownMediaUI() {
+  tearingDownMedia = true;
+  const video = elements.fullscreenVideo;
+  video.pause();
+  video.style.display = "none";
+  video.removeAttribute("src");
+  video.load();
+  if (document.fullscreenElement) {
+    document.exitFullscreen?.().catch(() => {});
+  }
+  if (elements.lightbox.open) {
+    elements.lightbox.close();
+  }
+  tearingDownMedia = false;
+}
+
+// A UI dismissal (close button, backdrop, ESC, fullscreen exit) pops the
+// history entry we pushed so the URL/history stay in sync; popstate then
+// performs the actual teardown.
+function requestCloseMedia() {
+  if (tearingDownMedia) return;
+  if (mediaHistoryOpen) {
+    history.back();
+  } else {
+    teardownMediaUI();
+  }
+}
+
 function openImage(item) {
   elements.lightboxImage.src = item.streamUrl;
   elements.lightboxImage.alt = item.name;
   elements.lightbox.showModal();
+  pushMediaHistory();
 }
 
 async function openVideo(index) {
   const current = state.media[index];
   if (!current) return;
   state.currentVideoIndex = index;
+  pushMediaHistory();
   const video = elements.fullscreenVideo;
   video.src = current.streamUrl;
   video.style.display = "block";
@@ -131,14 +170,6 @@ async function openVideo(index) {
   try {
     await video.play();
   } catch {}
-}
-
-function closePlayer() {
-  const video = elements.fullscreenVideo;
-  video.pause();
-  video.style.display = "none";
-  video.removeAttribute("src");
-  video.load();
 }
 
 function createSearchResultCard(item) {
@@ -207,11 +238,15 @@ async function searchEntries(queryText) {
   }
 }
 
-async function loadDirectory(path = "") {
+async function loadDirectory(path = "", { pushHistory = true } = {}) {
   setStatus("Loading media…");
   try {
     const query = buildQuery(path);
     const data = await fetchJson(`/api/browse${query ? `?${query}` : ""}`);
+    if (pushHistory) {
+      const url = data.path ? `?${buildQuery(data.path)}` : location.pathname;
+      history.pushState({ path: data.path }, "", url);
+    }
     state.currentPath = data.path;
     state.rootName = data.rootName || "Root";
     state.folders = data.folders || [];
@@ -243,15 +278,32 @@ elements.lightbox.addEventListener("click", (event) => {
   const rect = elements.lightbox.getBoundingClientRect();
   const inDialog = rect.top <= event.clientY && event.clientY <= rect.bottom && rect.left <= event.clientX && event.clientX <= rect.right;
   if (!inDialog) {
-    elements.lightbox.close();
+    requestCloseMedia();
   }
 });
+
+// Fires for the ✕ button, ESC, and programmatic close.
+elements.lightbox.addEventListener("close", () => requestCloseMedia());
 
 elements.fullscreenVideo.addEventListener("ended", () => stepVideo(1));
 document.addEventListener("fullscreenchange", () => {
-  if (!document.fullscreenElement) {
-    closePlayer();
+  if (!document.fullscreenElement && elements.fullscreenVideo.style.display !== "none") {
+    requestCloseMedia();
   }
 });
 
-loadDirectory();
+window.addEventListener("popstate", (event) => {
+  const newState = event.state;
+  if (mediaHistoryOpen && !newState?.media) {
+    mediaHistoryOpen = false;
+    teardownMediaUI();
+    return;
+  }
+  if (newState?.media) return;
+  const path = newState?.path ?? new URLSearchParams(location.search).get("path") ?? "";
+  loadDirectory(path, { pushHistory: false });
+});
+
+const initialPath = new URLSearchParams(location.search).get("path") || "";
+loadDirectory(initialPath, { pushHistory: false });
+history.replaceState({ path: initialPath }, "", location.href);
