@@ -14,6 +14,7 @@ const node_os_1 = __importDefault(require("node:os"));
 const node_path_1 = __importDefault(require("node:path"));
 const promises_2 = __importDefault(require("node:readline/promises"));
 const node_process_1 = require("node:process");
+const qrcode_terminal_1 = __importDefault(require("qrcode-terminal"));
 const app = (0, express_1.default)();
 const PORT = Number(process.env.PORT || 5000);
 const PUBLIC_DIR = node_path_1.default.resolve(__dirname, "..", "src", "public");
@@ -74,6 +75,20 @@ async function ensureVideoThumbnail(filePath, cacheKey) {
 }
 function createCacheKey(relativePath) {
     return Buffer.from(relativePath).toString("base64url");
+}
+function getLanAddresses() {
+    const interfaces = node_os_1.default.networkInterfaces();
+    const addresses = [];
+    for (const entries of Object.values(interfaces)) {
+        if (!entries)
+            continue;
+        for (const entry of entries) {
+            if (entry.family === "IPv4" && !entry.internal) {
+                addresses.push(entry.address);
+            }
+        }
+    }
+    return addresses;
 }
 function getRootFromArgs() {
     const arg = process.argv[2];
@@ -265,13 +280,58 @@ function installRoutes(state) {
         }
     });
 }
+async function chooseLanAddress(addresses) {
+    if (!addresses.length)
+        return null;
+    if (addresses.length === 1)
+        return addresses[0] ?? null;
+    console.log("Multiple network addresses found. Which one is your Wi-Fi?");
+    addresses.forEach((address, index) => {
+        console.log(`  [${index + 1}] http://${address}:${PORT}`);
+    });
+    const rl = promises_2.default.createInterface({ input: node_process_1.stdin, output: node_process_1.stdout });
+    try {
+        while (true) {
+            const answer = (await rl.question(`Select address [1-${addresses.length}] (default 1): `)).trim();
+            if (!answer)
+                return addresses[0] ?? null;
+            const choice = Number(answer);
+            if (Number.isInteger(choice) && choice >= 1 && choice <= addresses.length) {
+                return addresses[choice - 1] ?? null;
+            }
+            console.log("Invalid choice, try again.");
+        }
+    }
+    finally {
+        rl.close();
+    }
+}
 async function start() {
     const state = await promptRootDirectory();
     installRoutes(state);
-    app.listen(PORT, "0.0.0.0", () => {
-        console.log(`Bivrost running at http://localhost:${PORT}`);
-        console.log(`Folder shared: ${state.rootDir}`);
+    await new Promise((resolve) => {
+        app.listen(PORT, "0.0.0.0", () => resolve());
     });
+    console.log("");
+    console.log(`Bivrost running. Folder shared: ${state.rootDir}`);
+    console.log("");
+    console.log("Open on this laptop:");
+    console.log(`  http://localhost:${PORT}`);
+    console.log("");
+    const lanAddresses = getLanAddresses();
+    const selected = await chooseLanAddress(lanAddresses);
+    if (!selected) {
+        console.log("No LAN address found — make sure Wi-Fi is connected.");
+        console.log("");
+        return;
+    }
+    const phoneUrl = `http://${selected}:${PORT}`;
+    console.log("");
+    console.log("Scan this QR with your phone (same Wi-Fi):");
+    console.log(`  ${phoneUrl}`);
+    console.log("");
+    qrcode_terminal_1.default.generate(phoneUrl, { small: true });
+    console.log("");
 }
 start().catch((error) => {
     console.error(error instanceof Error ? error.message : error);
