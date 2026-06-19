@@ -1,47 +1,132 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Bivrost</title>
+    <meta name="theme-color" content="#05070d" />
+    <title>Bivröst — Media Bridge</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=Outfit:wght@300;400;500;600&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
+    <!-- Aurora atmosphere -->
+    <div class="aurora" aria-hidden="true">
+      <span class="aurora-band aurora-band--1"></span>
+      <span class="aurora-band aurora-band--2"></span>
+      <span class="aurora-band aurora-band--3"></span>
+      <span class="aurora-grain"></span>
+    </div>
+
+    <!-- Inline SVG icon sprite -->
+    <svg width="0" height="0" class="svg-sprite" aria-hidden="true" focusable="false">
+      <defs>
+        <symbol id="ico-bridge" viewBox="0 0 24 24">
+          <path d="M2 17c0-6 4.5-9 10-9s10 3 10 9" />
+          <path d="M2 17h20" />
+          <path d="M7 17v-3.2M12 17v-4.2M17 17v-3.2" />
+        </symbol>
+        <symbol id="ico-up" viewBox="0 0 24 24">
+          <path d="M12 19V6" />
+          <path d="m6 11 6-6 6 6" />
+        </symbol>
+        <symbol id="ico-search" viewBox="0 0 24 24">
+          <circle cx="11" cy="11" r="7" />
+          <path d="m20 20-3.2-3.2" />
+        </symbol>
+        <symbol id="ico-folder" viewBox="0 0 24 24">
+          <path d="M3 7.5A2.5 2.5 0 0 1 5.5 5h3.2a2 2 0 0 1 1.5.7l1 1.2a2 2 0 0 0 1.5.7h5.3A2.5 2.5 0 0 1 21 10v6.5a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 16.5Z" />
+        </symbol>
+        <symbol id="ico-file" viewBox="0 0 24 24">
+          <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z" />
+          <path d="M14 3v5h5" />
+        </symbol>
+        <symbol id="ico-play" viewBox="0 0 24 24">
+          <path d="M8 5.5v13l11-6.5Z" />
+        </symbol>
+        <symbol id="ico-image" viewBox="0 0 24 24">
+          <rect x="3" y="4" width="18" height="16" rx="2.5" />
+          <circle cx="8.5" cy="9.5" r="1.8" />
+          <path d="m4 17 4.5-4.5a2 2 0 0 1 2.8 0L20 21" />
+        </symbol>
+        <symbol id="ico-close" viewBox="0 0 24 24">
+          <path d="m6 6 12 12M18 6 6 18" />
+        </symbol>
+        <symbol id="ico-chevron" viewBox="0 0 24 24">
+          <path d="m9 6 6 6-6 6" />
+        </symbol>
+      </defs>
+    </svg>
+
     <div class="app-shell">
       <header class="topbar">
-        <div>
-          <p class="eyebrow">Bivrost</p>
-          <h1 id="page-title">Media Browser</h1>
+        <div class="brand">
+          <span class="brand-mark"><svg class="icon"><use href="#ico-bridge" /></svg></span>
+          <div class="brand-text">
+            <p class="eyebrow">Self-hosted media bridge</p>
+            <h1 class="wordmark" id="page-title">Bivröst</h1>
+          </div>
         </div>
-        <button id="up-button" class="ghost-button" type="button">Up</button>
+        <button id="up-button" class="ghost-button" type="button">
+          <svg class="icon"><use href="#ico-up" /></svg>
+          <span>Up a level</span>
+        </button>
       </header>
 
       <section class="toolbar">
-        <div class="toolbar-row">
-          <div class="breadcrumbs" id="breadcrumbs"></div>
-          <input id="search-input" class="search-input" type="search" placeholder="Search files and folders" autocomplete="off" />
+        <nav class="breadcrumbs" id="breadcrumbs" aria-label="Breadcrumb"></nav>
+        <div class="search-field">
+          <svg class="icon search-icon"><use href="#ico-search" /></svg>
+          <input
+            id="search-input"
+            class="search-input"
+            type="search"
+            placeholder="Search this folder…"
+            autocomplete="off"
+            spellcheck="false"
+          />
         </div>
       </section>
 
       <main>
-        <section id="status" class="status-card">Loading media…</section>
+        <section id="status" class="status-card">
+          <span class="status-pulse" aria-hidden="true"></span>
+          <span class="status-text">Loading media…</span>
+        </section>
         <section id="grid" class="media-grid"></section>
       </main>
+
+      <footer class="footnote">
+        <span>Bivröst</span>
+        <span class="footnote-dot" aria-hidden="true"></span>
+        <span>streaming your collection across the bridge</span>
+      </footer>
     </div>
 
     <dialog id="lightbox" class="lightbox">
       <form method="dialog" class="lightbox-close-row">
-        <button class="icon-button" aria-label="Close">✕</button>
+        <button class="icon-button" aria-label="Close preview">
+          <svg class="icon"><use href="#ico-close" /></svg>
+        </button>
       </form>
       <img id="lightbox-image" alt="Image preview" />
     </dialog>
 
     <template id="folder-card-template">
       <button class="card folder-card" type="button">
-        <div class="thumb placeholder">📁</div>
+        <div class="thumb placeholder">
+          <svg class="icon thumb-glyph"><use href="#ico-folder" /></svg>
+        </div>
         <div class="card-body">
           <h2 class="card-title"></h2>
-          <p class="card-meta">Folder</p>
+          <p class="card-meta">
+            <svg class="icon meta-icon"><use href="#ico-folder" /></svg>
+            <span>Folder</span>
+          </p>
         </div>
       </button>
     </template>
@@ -50,6 +135,9 @@
       <button class="card media-card" type="button">
         <div class="thumb">
           <img loading="lazy" alt="Thumbnail media" />
+          <span class="play-overlay" aria-hidden="true">
+            <svg class="icon"><use href="#ico-play" /></svg>
+          </span>
           <span class="badge"></span>
         </div>
         <div class="card-body">

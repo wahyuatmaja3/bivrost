@@ -12,6 +12,7 @@ const state = {
 const elements = {
   title: document.getElementById("page-title"),
   status: document.getElementById("status"),
+  statusText: document.querySelector("#status .status-text"),
   grid: document.getElementById("grid"),
   breadcrumbs: document.getElementById("breadcrumbs"),
   upButton: document.getElementById("up-button"),
@@ -31,10 +32,6 @@ async function fetchJson(url) {
   return response.json();
 }
 
-function formatPath(path) {
-  return path || "/";
-}
-
 function buildQuery(path) {
   const params = new URLSearchParams();
   if (path) params.set("path", path);
@@ -42,11 +39,49 @@ function buildQuery(path) {
 }
 
 function setStatus(message) {
-  elements.status.textContent = message;
+  if (elements.statusText) {
+    elements.statusText.textContent = message;
+  } else {
+    elements.status.textContent = message;
+  }
+}
+
+function svgIcon(id, className = "icon") {
+  return `<svg class="${className}"><use href="#${id}" /></svg>`;
+}
+
+function plural(count, noun) {
+  return `${count} ${noun}${count === 1 ? "" : "s"}`;
+}
+
+function browseSummary() {
+  if (!state.folders.length && !state.media.length) {
+    return "Empty folder";
+  }
+  const parts = [];
+  if (state.folders.length) parts.push(plural(state.folders.length, "folder"));
+  if (state.media.length) parts.push(plural(state.media.length, "media item"));
+  return parts.join("  ·  ");
 }
 
 function clearGrid() {
   elements.grid.innerHTML = "";
+}
+
+function renderSkeletons(count = 10) {
+  clearGrid();
+  for (let i = 0; i < count; i += 1) {
+    const card = document.createElement("div");
+    card.className = "card skeleton";
+    card.style.setProperty("--stagger", `${i * 40}ms`);
+    card.innerHTML =
+      '<div class="thumb"></div>' +
+      '<div class="card-body">' +
+      '<div class="sk-line"></div>' +
+      '<div class="sk-line sk-line--short"></div>' +
+      "</div>";
+    elements.grid.appendChild(card);
+  }
 }
 
 function renderBreadcrumbs() {
@@ -61,27 +96,35 @@ function renderBreadcrumbs() {
 
   elements.breadcrumbs.innerHTML = "";
   crumbs.forEach((crumb, index) => {
+    const isCurrent = index === crumbs.length - 1;
     const button = document.createElement("button");
     button.type = "button";
-    button.className = "crumb";
-    button.textContent = crumb.label;
+    button.className = isCurrent ? "crumb is-current" : "crumb";
+    if (index === 0) {
+      button.innerHTML = `${svgIcon("ico-folder")}<span>${crumb.label}</span>`;
+    } else {
+      button.textContent = crumb.label;
+    }
     button.addEventListener("click", () => loadDirectory(crumb.path));
     elements.breadcrumbs.appendChild(button);
 
-    if (index < crumbs.length - 1) {
+    if (!isCurrent) {
       const separator = document.createElement("span");
-      separator.textContent = "/";
-      separator.style.color = "#64748b";
+      separator.className = "crumb-sep";
+      separator.innerHTML = svgIcon("ico-chevron");
       elements.breadcrumbs.appendChild(separator);
     }
   });
 }
 
-function renderEmpty(message) {
+function renderEmpty(message, title = "Nothing here yet") {
   clearGrid();
   const empty = document.createElement("div");
   empty.className = "empty-state";
-  empty.textContent = message;
+  empty.innerHTML =
+    svgIcon("ico-image", "icon empty-glyph") +
+    `<h3>${title}</h3>` +
+    `<p>${message}</p>`;
   elements.grid.appendChild(empty);
 }
 
@@ -95,11 +138,33 @@ function createFolderCard(folder) {
 function createMediaCard(item, index) {
   const node = elements.mediaTemplate.content.firstElementChild.cloneNode(true);
   node.querySelector(".card-title").textContent = item.name;
-  node.querySelector(".card-meta").textContent = item.extension.toUpperCase();
-  node.querySelector(".badge").textContent = item.type;
+
+  const meta = node.querySelector(".card-meta");
+  meta.innerHTML =
+    svgIcon(item.type === "image" ? "ico-image" : "ico-play", "icon meta-icon") +
+    `<span>${item.extension.replace(".", "").toUpperCase()}</span>`;
+
+  const badge = node.querySelector(".badge");
+  badge.textContent = item.type;
+  badge.dataset.type = item.type;
+
+  // Play overlay belongs only to videos.
+  const overlay = node.querySelector(".play-overlay");
+  if (overlay && item.type !== "video") {
+    overlay.remove();
+  }
+
   const image = node.querySelector("img");
+  image.dataset.loaded = "false";
+  image.addEventListener("load", () => {
+    image.dataset.loaded = "true";
+  });
+  image.addEventListener("error", () => {
+    image.dataset.loaded = "true";
+  });
   image.src = item.thumbnailUrl;
   image.alt = item.name;
+
   node.addEventListener("click", () => {
     if (item.type === "image") {
       openImage(item);
@@ -178,14 +243,17 @@ function createSearchResultCard(item) {
   }
 
   const node = elements.folderTemplate.content.firstElementChild.cloneNode(true);
-  node.querySelector(".thumb").textContent = "📄";
+  const glyph = node.querySelector(".thumb-glyph use");
+  if (glyph) glyph.setAttribute("href", "#ico-file");
   node.querySelector(".card-title").textContent = item.name;
-  node.querySelector(".card-meta").textContent = "File";
+  node.querySelector(".card-meta").innerHTML =
+    svgIcon("ico-file", "icon meta-icon") + "<span>File</span>";
   return node;
 }
 
 function renderBrowser() {
-  elements.title.textContent = `Media Browser ${formatPath(state.currentPath)}`;
+  const segments = state.currentPath ? state.currentPath.split("/").filter(Boolean) : [];
+  elements.title.textContent = segments.length ? segments[segments.length - 1] : "Bivröst";
   elements.upButton.disabled = !state.currentPath;
   renderBreadcrumbs();
   clearGrid();
@@ -195,15 +263,24 @@ function renderBrowser() {
     : [...state.folders.map(createFolderCard), ...state.media.map(createMediaCard)];
 
   if (!items.length) {
-    renderEmpty(
-      state.searchQuery
-        ? "No matching files or folders in this location."
-        : "This folder does not contain any supported media yet.",
-    );
+    if (state.searchQuery) {
+      renderEmpty(
+        "No files or folders match your search in this location.",
+        "No matches found",
+      );
+    } else {
+      renderEmpty(
+        "This folder doesn't contain any supported media yet.",
+        "Empty folder",
+      );
+    }
     return;
   }
 
-  items.forEach((item) => elements.grid.appendChild(item));
+  items.forEach((item, index) => {
+    item.style.setProperty("--stagger", `${Math.min(index * 35, 600)}ms`);
+    elements.grid.appendChild(item);
+  });
 }
 
 function renderPlayer() {}
@@ -218,7 +295,7 @@ async function searchEntries(queryText) {
   state.searchQuery = queryText.trim();
   if (!state.searchQuery) {
     state.searchResults = [];
-    setStatus(`${state.folders.length} folders, ${state.media.length} media items`);
+    setStatus(browseSummary());
     renderBrowser();
     return;
   }
@@ -230,7 +307,7 @@ async function searchEntries(queryText) {
     params.set("q", state.searchQuery);
     const data = await fetchJson(`/api/search?${params.toString()}`);
     state.searchResults = data.results || [];
-    setStatus(`${state.searchResults.length} results`);
+    setStatus(`${plural(state.searchResults.length, "result")} for “${state.searchQuery}”`);
     renderBrowser();
   } catch (error) {
     setStatus(error.message || "Search failed.");
@@ -240,6 +317,7 @@ async function searchEntries(queryText) {
 
 async function loadDirectory(path = "", { pushHistory = true } = {}) {
   setStatus("Loading media…");
+  renderSkeletons();
   try {
     const query = buildQuery(path);
     const data = await fetchJson(`/api/browse${query ? `?${query}` : ""}`);
@@ -255,7 +333,7 @@ async function loadDirectory(path = "", { pushHistory = true } = {}) {
     state.searchQuery = "";
     state.searchResults = [];
     elements.searchInput.value = "";
-    setStatus(`${state.folders.length} folders, ${state.media.length} media items`);
+    setStatus(browseSummary());
     renderBrowser();
   } catch (error) {
     setStatus(error.message || "Failed to load media.");
