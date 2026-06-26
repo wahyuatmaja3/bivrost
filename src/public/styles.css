@@ -8,8 +8,8 @@
   --void: #f8fafc;
   --night: #f1f5f9;
   --slate: #ffffff;
-  --surface: rgba(255, 255, 255, 0.45);
-  --surface-strong: rgba(255, 255, 255, 0.7);
+  --surface: rgba(255, 255, 255, 0.9);
+  --surface-strong: #ffffff;
   --hairline: rgba(0, 0, 0, 0.08);
   --hairline-bright: rgba(0, 0, 0, 0.15);
 
@@ -17,11 +17,11 @@
   --ink-soft: #334155;
   --ink-faint: #64748b;
 
-  --aurora-teal: #99f6e4;
-  --aurora-cyan: #bae6fd;
-  --aurora-iris: #c7d2fe;
-  --aurora-rose: #fbcfe8;
-  --aurora-gold: #fef08a;
+  --aurora-teal: #14b8a6;
+  --aurora-cyan: #0ea5e9;
+  --aurora-iris: #6366f1;
+  --aurora-rose: #ec4899;
+  --aurora-gold: #eab308;
 
   --accent: #0ea5e9;
   --accent-glow: rgba(14, 165, 233, 0.25);
@@ -70,9 +70,10 @@ body {
   inset: -20vh -10vw;
   z-index: -2;
   pointer-events: none;
-  filter: blur(60px) saturate(140%);
+  filter: blur(40px) saturate(140%);
   opacity: 0.9;
   will-change: filter;
+  contain: strict;
 }
 
 .aurora-band {
@@ -82,8 +83,8 @@ body {
   height: 42vh;
   transform: translateX(-50%);
   border-radius: 50%;
-  mix-blend-mode: multiply;
-  opacity: 0.7;
+  mix-blend-mode: normal;
+  opacity: 0.85;
   will-change: transform;
 }
 
@@ -110,10 +111,9 @@ body {
 .aurora-grain {
   position: absolute;
   inset: 0;
-  opacity: 0.4;
+  opacity: 0.15;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.35'/%3E%3C/svg%3E");
   filter: contrast(120%) brightness(110%);
-  mix-blend-mode: overlay;
 }
 
 @keyframes drift1 {
@@ -242,14 +242,15 @@ button {
   align-items: center;
   gap: 8px;
   padding: 9px 16px;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-pill);
   font-size: 0.88rem;
   font-weight: 500;
   letter-spacing: 0.01em;
   color: var(--ink-soft);
   background: var(--surface);
   border: 1px solid var(--hairline);
-  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+  transition: transform 0.2s ease, border-color 0.2s ease, color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
 }
 
 .ghost-button .icon {
@@ -283,8 +284,6 @@ button {
   border-radius: var(--radius-lg);
   background: var(--surface-strong);
   border: 1px solid var(--hairline);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
   box-shadow: var(--shadow-card);
   animation: rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.06s both;
 }
@@ -429,8 +428,6 @@ button {
   color: inherit;
   background: var(--surface);
   border: 1px solid var(--hairline);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
   box-shadow: var(--shadow-card);
   transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.2s ease, background 0.2s ease, box-shadow 0.3s ease;
   animation: card-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
@@ -539,10 +536,8 @@ button {
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--ink);
-  background: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.95);
   border: 1px solid rgba(255,255,255,0.9);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
   box-shadow: 0 2px 8px rgba(0,0,0,0.05);
 }
 
@@ -687,8 +682,6 @@ button {
   border: 1px solid var(--hairline-bright);
   border-radius: var(--radius-xl);
   background: var(--surface-strong);
-  backdrop-filter: blur(32px);
-  -webkit-backdrop-filter: blur(32px);
   box-shadow: var(--shadow-float);
   color: var(--ink);
   display: flex;
@@ -701,9 +694,7 @@ button {
 }
 
 .lightbox::backdrop {
-  background: rgba(255, 255, 255, 0.4);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: rgba(255, 255, 255, 0.85);
 }
 
 /* Header: prev + counter + spacer + close */
@@ -1115,5 +1106,4 @@ a, button, input, [role="button"], .card, .thumb, .icon-button, .lightbox-nav-bt
   height: 56px;
   background-color: rgba(14, 165, 233, 0.1);
   border-color: rgba(14, 165, 233, 0.5);
-  backdrop-filter: blur(2px);
 }
