@@ -27,6 +27,7 @@ if (ffmpeg_static_1.default) {
 }
 app.use((0, cors_1.default)());
 app.use(express_1.default.static(PUBLIC_DIR));
+app.use("/plyr", express_1.default.static(node_path_1.default.resolve(__dirname, "..", "node_modules", "plyr", "dist")));
 function normalizeRelativePath(relativePath) {
     return relativePath.replace(/\\/g, "/").split("/").filter(Boolean).join("/");
 }

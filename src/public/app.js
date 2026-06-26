@@ -22,32 +22,59 @@ const elements = {
   folderTemplate: document.getElementById("folder-card-template"),
   mediaTemplate: document.getElementById("media-card-template"),
   player: document.getElementById("player"),
-  playerVideo: document.getElementById("player-video"),
+  playerTopbar: document.getElementById("player-topbar"),
   playerTitle: document.getElementById("player-title"),
   playerBack: document.getElementById("player-back"),
-  playerBigplay: document.getElementById("player-bigplay"),
-  playerSpinner: document.getElementById("player-spinner"),
-  playerTouch: document.getElementById("player-touch"),
-  rippleBack: document.getElementById("ripple-back"),
-  rippleFwd: document.getElementById("ripple-fwd"),
-  progress: document.getElementById("player-progress"),
-  progressBuffer: document.getElementById("progress-buffer"),
-  progressPlayed: document.getElementById("progress-played"),
   ctrlPrev: document.getElementById("ctrl-prev"),
-  ctrlPlay: document.getElementById("ctrl-play"),
   ctrlNext: document.getElementById("ctrl-next"),
-  ctrlMute: document.getElementById("ctrl-mute"),
-  ctrlVolume: document.getElementById("ctrl-volume"),
-  ctrlFullscreen: document.getElementById("ctrl-fullscreen"),
-  timeCurrent: document.getElementById("time-current"),
-  timeDuration: document.getElementById("time-duration"),
 };
 
+// ---- Plyr instance (lazy-initialized on first video open) ----
+let plyr = null;
+
+function getPlyr() {
+  if (plyr) return plyr;
+  plyr = new Plyr("#player-video", {
+    controls: [
+      "play-large",
+      "play",
+      "rewind",
+      "fast-forward",
+      "progress",
+      "current-time",
+      "duration",
+      "mute",
+      "volume",
+      "fullscreen",
+    ],
+    keyboard: { focused: true, global: false },
+    tooltips: { controls: true, seek: true },
+    invertTime: false,
+    toggleInvert: false,
+    fullscreen: { enabled: true, fallback: true, iosNative: true },
+    ratio: undefined,
+    speed: { selected: 1, options: [0.5, 0.75, 1, 1.25, 1.5, 2] },
+  });
+
+  plyr.on("ended", () => stepVideo(1));
+  plyr.on("enterfullscreen", () => lockOrientationToVideo());
+  plyr.on("exitfullscreen", () => unlockOrientation());
+
+  // Sync topbar visibility with Plyr's idle/controls behaviour
+  plyr.on("controlshidden", () => {
+    if (elements.playerTopbar) elements.playerTopbar.style.opacity = "0";
+  });
+  plyr.on("controlsshown", () => {
+    if (elements.playerTopbar) elements.playerTopbar.style.opacity = "1";
+  });
+
+  return plyr;
+}
+
+// ---- Utilities ----
 async function fetchJson(url) {
   const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`Request failed: ${response.status}`);
-  }
+  if (!response.ok) throw new Error(`Request failed: ${response.status}`);
   return response.json();
 }
 
@@ -58,11 +85,8 @@ function buildQuery(path) {
 }
 
 function setStatus(message) {
-  if (elements.statusText) {
-    elements.statusText.textContent = message;
-  } else {
-    elements.status.textContent = message;
-  }
+  if (elements.statusText) elements.statusText.textContent = message;
+  else elements.status.textContent = message;
 }
 
 function svgIcon(id, className = "icon") {
@@ -74,22 +98,59 @@ function plural(count, noun) {
 }
 
 function browseSummary() {
-  if (!state.folders.length && !state.media.length) {
-    return "Empty folder";
-  }
+  if (!state.folders.length && !state.media.length) return "Empty folder";
   const parts = [];
   if (state.folders.length) parts.push(plural(state.folders.length, "folder"));
   if (state.media.length) parts.push(plural(state.media.length, "media item"));
   return parts.join("  ·  ");
 }
 
-function clearGrid() {
-  elements.grid.innerHTML = "";
+// ---- Orientation lock ----
+function lockOrientationToVideo() {
+  const video = document.getElementById("player-video");
+  if (!video || !video.videoWidth || !video.videoHeight) return;
+  const target = video.videoHeight > video.videoWidth ? "portrait" : "landscape";
+  try { screen.orientation?.lock?.(target).catch(() => {}); } catch {}
 }
+
+function unlockOrientation() {
+  try { screen.orientation?.unlock?.(); } catch {}
+}
+
+// ---- History ----
+let mediaHistoryOpen = false;
+let tearingDownMedia = false;
+
+function pushMediaHistory() {
+  if (mediaHistoryOpen) return;
+  mediaHistoryOpen = true;
+  history.pushState({ media: true, path: state.currentPath }, "", location.href);
+}
+
+function teardownMediaUI() {
+  tearingDownMedia = true;
+  if (plyr) {
+    plyr.pause();
+    plyr.source = { type: "video", sources: [] };
+  }
+  elements.player.hidden = true;
+  if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+  if (elements.lightbox.open) elements.lightbox.close();
+  tearingDownMedia = false;
+}
+
+function requestCloseMedia() {
+  if (tearingDownMedia) return;
+  if (mediaHistoryOpen) history.back();
+  else teardownMediaUI();
+}
+
+// ---- Grid rendering ----
+function clearGrid() { elements.grid.innerHTML = ""; }
 
 function renderSkeletons(count = 10) {
   clearGrid();
-  for (let i = 0; i < count; i += 1) {
+  for (let i = 0; i < count; i++) {
     const card = document.createElement("div");
     card.className = "card skeleton";
     card.style.setProperty("--stagger", `${i * 40}ms`);
@@ -107,44 +168,40 @@ function renderBreadcrumbs() {
   const segments = state.currentPath ? state.currentPath.split("/").filter(Boolean) : [];
   const crumbs = [{ label: state.rootName, path: "" }];
   let current = "";
-
-  for (const segment of segments) {
-    current = current ? `${current}/${segment}` : segment;
-    crumbs.push({ label: segment, path: current });
+  for (const seg of segments) {
+    current = current ? `${current}/${seg}` : seg;
+    crumbs.push({ label: seg, path: current });
   }
-
   elements.breadcrumbs.innerHTML = "";
   crumbs.forEach((crumb, index) => {
     const isCurrent = index === crumbs.length - 1;
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = isCurrent ? "crumb is-current" : "crumb";
-    if (index === 0) {
-      button.innerHTML = `${svgIcon("ico-folder")}<span>${crumb.label}</span>`;
-    } else {
-      button.textContent = crumb.label;
-    }
-    button.addEventListener("click", () => loadDirectory(crumb.path));
-    elements.breadcrumbs.appendChild(button);
-
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = isCurrent ? "crumb is-current" : "crumb";
+    btn.innerHTML =
+      index === 0
+        ? `${svgIcon("ico-folder")}<span>${crumb.label}</span>`
+        : crumb.label;
+    btn.addEventListener("click", () => loadDirectory(crumb.path));
+    elements.breadcrumbs.appendChild(btn);
     if (!isCurrent) {
-      const separator = document.createElement("span");
-      separator.className = "crumb-sep";
-      separator.innerHTML = svgIcon("ico-chevron");
-      elements.breadcrumbs.appendChild(separator);
+      const sep = document.createElement("span");
+      sep.className = "crumb-sep";
+      sep.innerHTML = svgIcon("ico-chevron");
+      elements.breadcrumbs.appendChild(sep);
     }
   });
 }
 
 function renderEmpty(message, title = "Nothing here yet") {
   clearGrid();
-  const empty = document.createElement("div");
-  empty.className = "empty-state";
-  empty.innerHTML =
+  const el = document.createElement("div");
+  el.className = "empty-state";
+  el.innerHTML =
     svgIcon("ico-image", "icon empty-glyph") +
     `<h3>${title}</h3>` +
     `<p>${message}</p>`;
-  elements.grid.appendChild(empty);
+  elements.grid.appendChild(el);
 }
 
 function createFolderCard(folder) {
@@ -157,85 +214,33 @@ function createFolderCard(folder) {
 function createMediaCard(item, index) {
   const node = elements.mediaTemplate.content.firstElementChild.cloneNode(true);
   node.querySelector(".card-title").textContent = item.name;
-
   const meta = node.querySelector(".card-meta");
   meta.innerHTML =
     svgIcon(item.type === "image" ? "ico-image" : "ico-play", "icon meta-icon") +
     `<span>${item.extension.replace(".", "").toUpperCase()}</span>`;
-
   const badge = node.querySelector(".badge");
   badge.textContent = item.type;
   badge.dataset.type = item.type;
 
-  // Play overlay belongs only to videos.
   const overlay = node.querySelector(".play-overlay");
-  if (overlay && item.type !== "video") {
-    overlay.remove();
-  }
+  if (overlay && item.type !== "video") overlay.remove();
 
   const image = node.querySelector("img");
   const thumb = node.querySelector(".thumb");
   image.dataset.loaded = "false";
   image.addEventListener("load", () => {
     image.dataset.loaded = "true";
-    // Detect portrait thumbnails and flag the container
-    if (image.naturalHeight > image.naturalWidth) {
-      thumb.classList.add("is-portrait");
-    }
+    if (image.naturalHeight > image.naturalWidth) thumb.classList.add("is-portrait");
   });
-  image.addEventListener("error", () => {
-    image.dataset.loaded = "true";
-  });
+  image.addEventListener("error", () => { image.dataset.loaded = "true"; });
   image.src = item.thumbnailUrl;
   image.alt = item.name;
 
   node.addEventListener("click", () => {
-    if (item.type === "image") {
-      openImage(item);
-      return;
-    }
+    if (item.type === "image") { openImage(item); return; }
     openVideo(index);
   });
   return node;
-}
-
-let mediaHistoryOpen = false;
-let tearingDownMedia = false;
-
-function pushMediaHistory() {
-  if (mediaHistoryOpen) return;
-  mediaHistoryOpen = true;
-  history.pushState({ media: true, path: state.currentPath }, "", location.href);
-}
-
-function teardownMediaUI() {
-  tearingDownMedia = true;
-  const video = elements.playerVideo;
-  video.pause();
-  video.removeAttribute("src");
-  video.load();
-  elements.player.hidden = true;
-  elements.player.classList.remove("is-playing", "is-idle");
-  stopIdleTimer();
-  if (document.fullscreenElement) {
-    document.exitFullscreen?.().catch(() => {});
-  }
-  if (elements.lightbox.open) {
-    elements.lightbox.close();
-  }
-  tearingDownMedia = false;
-}
-
-// A UI dismissal (close button, backdrop, ESC, fullscreen exit) pops the
-// history entry we pushed so the URL/history stay in sync; popstate then
-// performs the actual teardown.
-function requestCloseMedia() {
-  if (tearingDownMedia) return;
-  if (mediaHistoryOpen) {
-    history.back();
-  } else {
-    teardownMediaUI();
-  }
 }
 
 function openImage(item) {
@@ -245,9 +250,10 @@ function openImage(item) {
   pushMediaHistory();
 }
 
+// ---- Video player ----
 function videoIndices() {
-  return state.media.reduce((acc, item, index) => {
-    if (item.type === "video") acc.push(index);
+  return state.media.reduce((acc, item, i) => {
+    if (item.type === "video") acc.push(i);
     return acc;
   }, []);
 }
@@ -259,139 +265,35 @@ function updateNavButtons() {
   elements.ctrlNext.disabled = pos === -1 || pos >= order.length - 1;
 }
 
+function stepVideo(delta) {
+  const order = videoIndices();
+  const pos = order.indexOf(state.currentVideoIndex);
+  if (pos === -1) return;
+  const next = pos + delta;
+  if (next < 0 || next >= order.length) return;
+  openVideo(order[next]);
+}
+
 async function openVideo(index) {
   const current = state.media[index];
   if (!current || current.type !== "video") return;
   state.currentVideoIndex = index;
   pushMediaHistory();
 
-  const video = elements.playerVideo;
   elements.player.hidden = false;
-  elements.player.classList.remove("is-playing");
   elements.playerTitle.textContent = current.name;
-  elements.playerSpinner.hidden = false;
-  video.src = current.streamUrl;
-  video.load();
   updateNavButtons();
-  setPlayIcon(false);
-  showControls();
-  kickIdleTimer();
 
-  try {
-    await video.play();
-  } catch {}
+  const p = getPlyr();
+  p.source = {
+    type: "video",
+    sources: [{ src: current.streamUrl, type: `video/${current.extension.replace(".", "")}` }],
+  };
+
+  try { await p.play(); } catch {}
 }
 
-function setPlayIcon(isPlaying) {
-  const useEl = elements.ctrlPlay.querySelector("use");
-  useEl.setAttribute("href", isPlaying ? "#ico-pause" : "#ico-play");
-  elements.ctrlPlay.dataset.mode = isPlaying ? "pause" : "play";
-  elements.ctrlPlay.setAttribute("aria-label", isPlaying ? "Pause" : "Play");
-}
-
-function setMuteIcon() {
-  const video = elements.playerVideo;
-  const muted = video.muted || video.volume === 0;
-  elements.ctrlMute.querySelector("use").setAttribute("href", muted ? "#ico-mute" : "#ico-volume");
-}
-
-function formatTime(seconds) {
-  if (!Number.isFinite(seconds)) return "0:00";
-  const total = Math.floor(seconds);
-  const h = Math.floor(total / 3600);
-  const m = Math.floor((total % 3600) / 60);
-  const s = total % 60;
-  const mm = h > 0 ? String(m).padStart(2, "0") : String(m);
-  const ss = String(s).padStart(2, "0");
-  return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
-}
-
-function togglePlay() {
-  const video = elements.playerVideo;
-  if (video.paused) {
-    video.play().catch(() => {});
-  } else {
-    video.pause();
-  }
-}
-
-function seekBy(delta) {
-  const video = elements.playerVideo;
-  if (!Number.isFinite(video.duration)) return;
-  video.currentTime = Math.min(Math.max(0, video.currentTime + delta), video.duration);
-}
-
-function flashRipple(forward) {
-  const ripple = forward ? elements.rippleFwd : elements.rippleBack;
-  ripple.classList.remove("flash");
-  void ripple.offsetWidth;
-  ripple.classList.add("flash");
-}
-
-function lockOrientationToVideo() {
-  const video = elements.playerVideo;
-  if (!video.videoWidth || !video.videoHeight) return;
-  const target = video.videoHeight > video.videoWidth ? "portrait" : "landscape";
-  try {
-    screen.orientation?.lock?.(target).catch(() => {});
-  } catch {}
-}
-
-function unlockOrientation() {
-  try {
-    screen.orientation?.unlock?.();
-  } catch {}
-}
-
-async function toggleFullscreen() {
-  try {
-    if (document.fullscreenElement) {
-      await document.exitFullscreen();
-    } else {
-      await elements.player.requestFullscreen();
-      lockOrientationToVideo();
-    }
-  } catch {}
-}
-
-// ---- Auto-hide controls ----
-let idleTimer = null;
-
-function stopIdleTimer() {
-  if (idleTimer) {
-    clearTimeout(idleTimer);
-    idleTimer = null;
-  }
-}
-
-function showControls() {
-  elements.player.classList.remove("is-idle");
-}
-
-function kickIdleTimer() {
-  showControls();
-  stopIdleTimer();
-  idleTimer = setTimeout(() => {
-    if (!elements.playerVideo.paused) {
-      elements.player.classList.add("is-idle");
-    }
-  }, 2800);
-}
-
-function createSearchResultCard(item) {
-  if (item.type === "folder") {
-    return createFolderCard(item);
-  }
-
-  const node = elements.folderTemplate.content.firstElementChild.cloneNode(true);
-  const glyph = node.querySelector(".thumb-glyph use");
-  if (glyph) glyph.setAttribute("href", "#ico-file");
-  node.querySelector(".card-title").textContent = item.name;
-  node.querySelector(".card-meta").innerHTML =
-    svgIcon("ico-file", "icon meta-icon") + "<span>File</span>";
-  return node;
-}
-
+// ---- Browser view ----
 function renderBrowser() {
   const segments = state.currentPath ? state.currentPath.split("/").filter(Boolean) : [];
   elements.title.textContent = segments.length ? segments[segments.length - 1] : "Bivröst";
@@ -404,17 +306,12 @@ function renderBrowser() {
     : [...state.folders.map(createFolderCard), ...state.media.map(createMediaCard)];
 
   if (!items.length) {
-    if (state.searchQuery) {
-      renderEmpty(
-        "No files or folders match your search in this location.",
-        "No matches found",
-      );
-    } else {
-      renderEmpty(
-        "This folder doesn't contain any supported media yet.",
-        "Empty folder",
-      );
-    }
+    renderEmpty(
+      state.searchQuery
+        ? "No files or folders match your search in this location."
+        : "This folder doesn't contain any supported media yet.",
+      state.searchQuery ? "No matches found" : "Empty folder"
+    );
     return;
   }
 
@@ -424,13 +321,15 @@ function renderBrowser() {
   });
 }
 
-function stepVideo(delta) {
-  const order = videoIndices();
-  const pos = order.indexOf(state.currentVideoIndex);
-  if (pos === -1) return;
-  const nextPos = pos + delta;
-  if (nextPos < 0 || nextPos >= order.length) return;
-  openVideo(order[nextPos]);
+function createSearchResultCard(item) {
+  if (item.type === "folder") return createFolderCard(item);
+  const node = elements.folderTemplate.content.firstElementChild.cloneNode(true);
+  const glyph = node.querySelector(".thumb-glyph use");
+  if (glyph) glyph.setAttribute("href", "#ico-file");
+  node.querySelector(".card-title").textContent = item.name;
+  node.querySelector(".card-meta").innerHTML =
+    svgIcon("ico-file", "icon meta-icon") + "<span>File</span>";
+  return node;
 }
 
 async function searchEntries(queryText) {
@@ -441,7 +340,6 @@ async function searchEntries(queryText) {
     renderBrowser();
     return;
   }
-
   setStatus("Searching…");
   try {
     const params = new URLSearchParams();
@@ -449,7 +347,7 @@ async function searchEntries(queryText) {
     params.set("q", state.searchQuery);
     const data = await fetchJson(`/api/search?${params.toString()}`);
     state.searchResults = data.results || [];
-    setStatus(`${plural(state.searchResults.length, "result")} for “${state.searchQuery}”`);
+    setStatus(`${plural(state.searchResults.length, "result")} for "${state.searchQuery}"`);
     renderBrowser();
   } catch (error) {
     setStatus(error.message || "Search failed.");
@@ -470,7 +368,7 @@ async function loadDirectory(path = "", { pushHistory = true } = {}) {
     state.currentPath = data.path;
     state.rootName = data.rootName || "Root";
     state.folders = data.folders || [];
-    state.media = (data.media || []).filter((item) => item.type === "image" || item.type === "video");
+    state.media = (data.media || []).filter((i) => i.type === "image" || i.type === "video");
     state.view = "browser";
     state.searchQuery = "";
     state.searchResults = [];
@@ -483,6 +381,7 @@ async function loadDirectory(path = "", { pushHistory = true } = {}) {
   }
 }
 
+// ---- Event wiring ----
 elements.upButton.addEventListener("click", () => {
   if (!state.currentPath) return;
   const parts = state.currentPath.split("/").filter(Boolean);
@@ -490,201 +389,36 @@ elements.upButton.addEventListener("click", () => {
   loadDirectory(parts.join("/"));
 });
 
-elements.searchInput.addEventListener("input", (event) => {
-  searchEntries(event.target.value);
-});
+elements.searchInput.addEventListener("input", (e) => searchEntries(e.target.value));
 
-elements.lightbox.addEventListener("click", (event) => {
+elements.lightbox.addEventListener("click", (e) => {
   const rect = elements.lightbox.getBoundingClientRect();
-  const inDialog = rect.top <= event.clientY && event.clientY <= rect.bottom && rect.left <= event.clientX && event.clientX <= rect.right;
-  if (!inDialog) {
-    requestCloseMedia();
-  }
+  const inside =
+    rect.top <= e.clientY && e.clientY <= rect.bottom &&
+    rect.left <= e.clientX && e.clientX <= rect.right;
+  if (!inside) requestCloseMedia();
 });
-
-// Fires for the ✕ button, ESC, and programmatic close.
 elements.lightbox.addEventListener("close", () => requestCloseMedia());
 
-// ---- Player wiring ----
-const video = elements.playerVideo;
-
-video.addEventListener("play", () => {
-  elements.player.classList.add("is-playing");
-  setPlayIcon(true);
-  kickIdleTimer();
-});
-video.addEventListener("pause", () => {
-  elements.player.classList.remove("is-playing");
-  setPlayIcon(false);
-  showControls();
-  stopIdleTimer();
-});
-video.addEventListener("waiting", () => {
-  elements.playerSpinner.hidden = false;
-});
-video.addEventListener("playing", () => {
-  elements.playerSpinner.hidden = true;
-});
-video.addEventListener("canplay", () => {
-  elements.playerSpinner.hidden = true;
-});
-video.addEventListener("loadedmetadata", () => {
-  elements.timeDuration.textContent = formatTime(video.duration);
-});
-video.addEventListener("timeupdate", () => {
-  if (scrubbing) return;
-  const ratio = video.duration ? video.currentTime / video.duration : 0;
-  elements.progressPlayed.style.width = `${ratio * 100}%`;
-  elements.timeCurrent.textContent = formatTime(video.currentTime);
-});
-video.addEventListener("progress", () => {
-  if (!video.buffered.length || !video.duration) return;
-  const end = video.buffered.end(video.buffered.length - 1);
-  elements.progressBuffer.style.width = `${(end / video.duration) * 100}%`;
-});
-video.addEventListener("volumechange", () => {
-  elements.ctrlVolume.value = video.muted ? 0 : video.volume;
-  setMuteIcon();
-});
-video.addEventListener("ended", () => stepVideo(1));
-
-elements.ctrlPlay.addEventListener("click", togglePlay);
-elements.playerBigplay.addEventListener("click", togglePlay);
+elements.playerBack.addEventListener("click", () => requestCloseMedia());
 elements.ctrlPrev.addEventListener("click", () => stepVideo(-1));
 elements.ctrlNext.addEventListener("click", () => stepVideo(1));
-elements.playerBack.addEventListener("click", () => requestCloseMedia());
-elements.ctrlFullscreen.addEventListener("click", toggleFullscreen);
 
-elements.ctrlMute.addEventListener("click", () => {
-  video.muted = !video.muted;
-});
-elements.ctrlVolume.addEventListener("input", (event) => {
-  const value = Number(event.target.value);
-  video.volume = value;
-  video.muted = value === 0;
-});
-
-// Tap to toggle controls / play; double-tap sides to seek.
-let lastTap = 0;
-let tapTimer = null;
-elements.playerTouch.addEventListener("click", (event) => {
-  const now = Date.now();
-  const rect = elements.playerTouch.getBoundingClientRect();
-  const forward = event.clientX - rect.left > rect.width / 2;
-
-  if (now - lastTap < 300) {
-    clearTimeout(tapTimer);
-    lastTap = 0;
-    seekBy(forward ? 10 : -10);
-    flashRipple(forward);
-    kickIdleTimer();
-    return;
-  }
-
-  lastTap = now;
-  tapTimer = setTimeout(() => {
-    if (elements.player.classList.contains("is-idle")) {
-      kickIdleTimer();
-    } else if (video.paused) {
-      togglePlay();
-    } else {
-      elements.player.classList.add("is-idle");
-    }
-  }, 280);
-});
-
-elements.player.addEventListener("mousemove", () => kickIdleTimer());
-
-// Scrubbing
-let scrubbing = false;
-
-function seekFromPointer(clientX) {
-  const rect = elements.progress.getBoundingClientRect();
-  const ratio = Math.min(Math.max(0, (clientX - rect.left) / rect.width), 1);
-  if (Number.isFinite(video.duration)) {
-    elements.progressPlayed.style.width = `${ratio * 100}%`;
-    elements.timeCurrent.textContent = formatTime(ratio * video.duration);
-    return ratio;
-  }
-  return null;
-}
-
-elements.progress.addEventListener("pointerdown", (event) => {
-  scrubbing = true;
-  elements.progress.classList.add("is-scrubbing");
-  elements.progress.setPointerCapture(event.pointerId);
-  seekFromPointer(event.clientX);
-  showControls();
-});
-elements.progress.addEventListener("pointermove", (event) => {
-  if (scrubbing) seekFromPointer(event.clientX);
-});
-elements.progress.addEventListener("pointerup", (event) => {
-  if (!scrubbing) return;
-  scrubbing = false;
-  elements.progress.classList.remove("is-scrubbing");
-  const ratio = seekFromPointer(event.clientX);
-  if (ratio !== null) video.currentTime = ratio * video.duration;
-  kickIdleTimer();
-});
-
-// Keyboard shortcuts (desktop)
-document.addEventListener("keydown", (event) => {
+// Global keyboard (Escape to close, N/P for prev/next)
+document.addEventListener("keydown", (e) => {
   if (elements.player.hidden) return;
-  if (event.target instanceof HTMLInputElement) return;
-  switch (event.key) {
-    case " ":
-    case "k":
-      event.preventDefault();
-      togglePlay();
-      break;
-    case "ArrowRight":
-      seekBy(5);
-      flashRipple(true);
-      kickIdleTimer();
-      break;
-    case "ArrowLeft":
-      seekBy(-5);
-      flashRipple(false);
-      kickIdleTimer();
-      break;
-    case "ArrowUp":
-      event.preventDefault();
-      video.volume = Math.min(1, video.volume + 0.1);
-      video.muted = false;
-      break;
-    case "ArrowDown":
-      event.preventDefault();
-      video.volume = Math.max(0, video.volume - 0.1);
-      break;
-    case "m":
-      video.muted = !video.muted;
-      break;
-    case "f":
-      toggleFullscreen();
-      break;
-    case "n":
-      stepVideo(1);
-      break;
-    case "p":
-      stepVideo(-1);
-      break;
+  if (e.target instanceof HTMLInputElement) return;
+  switch (e.key) {
     case "Escape":
       if (!document.fullscreenElement) requestCloseMedia();
       break;
-    default:
-      break;
+    case "n": stepVideo(1); break;
+    case "p": stepVideo(-1); break;
   }
 });
 
-document.addEventListener("fullscreenchange", () => {
-  const useEl = elements.ctrlFullscreen.querySelector("use");
-  useEl.setAttribute("href", document.fullscreenElement ? "#ico-compress" : "#ico-expand");
-  if (!document.fullscreenElement) unlockOrientation();
-});
-
-window.addEventListener("popstate", (event) => {
-  const newState = event.state;
+window.addEventListener("popstate", (e) => {
+  const newState = e.state;
   if (mediaHistoryOpen && !newState?.media) {
     mediaHistoryOpen = false;
     teardownMediaUI();
