@@ -1,25 +1,22 @@
 /* ============================================================
-   Bivröst — "Aurora Bridge"
-   Nordic night · living aurora · frosted glass · editorial serif
+   Bivröst — sharp editorial dark UI
    ============================================================ */
 
 :root {
   color-scheme: dark;
 
-  /* Palette — obsidian night under a rainbow bridge */
-  --void: #05070d;
-  --night: #090c16;
-  --slate: #0f1422;
-  --surface: rgba(20, 26, 42, 0.62);
-  --surface-strong: rgba(26, 33, 52, 0.86);
-  --hairline: rgba(150, 180, 255, 0.12);
-  --hairline-bright: rgba(160, 200, 255, 0.28);
+  --void: #060810;
+  --night: #0a0d18;
+  --slate: #0e1220;
+  --surface: rgba(14, 18, 32, 0.92);
+  --surface-strong: rgba(18, 23, 40, 0.97);
+  --hairline: rgba(255, 255, 255, 0.07);
+  --hairline-bright: rgba(56, 189, 248, 0.3);
 
-  --ink: #eef2fb;
-  --ink-soft: #aeb8d4;
-  --ink-faint: #6f7ba0;
+  --ink: #f0f4ff;
+  --ink-soft: #99a8c8;
+  --ink-faint: #4e5a7a;
 
-  /* Aurora spectrum — the bridge of colors */
   --aurora-teal: #2ee6c4;
   --aurora-cyan: #38bdf8;
   --aurora-iris: #7c8bff;
@@ -27,15 +24,16 @@
   --aurora-gold: #ffd479;
 
   --accent: var(--aurora-cyan);
-  --accent-glow: rgba(56, 189, 248, 0.45);
+  --accent-glow: rgba(56, 189, 248, 0.35);
 
-  --radius-xl: 26px;
-  --radius-lg: 20px;
-  --radius-md: 14px;
-  --radius-pill: 999px;
+  /* Minimal radius — sharp modern look */
+  --radius-xl: 6px;
+  --radius-lg: 4px;
+  --radius-md: 3px;
+  --radius-pill: 4px;
 
-  --shadow-card: 0 22px 50px -28px rgba(0, 0, 0, 0.9);
-  --shadow-float: 0 30px 70px -30px rgba(0, 0, 0, 0.95);
+  --shadow-card: 0 1px 0 0 rgba(255,255,255,0.04) inset, 0 4px 24px -8px rgba(0,0,0,0.7);
+  --shadow-float: 0 8px 40px -8px rgba(0,0,0,0.85);
 
   --font-display: "Fraunces", "Iowan Old Style", Georgia, serif;
   --font-ui: "Outfit", system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -178,7 +176,9 @@ button {
   justify-content: space-between;
   align-items: center;
   gap: 18px;
-  margin-bottom: clamp(22px, 4vw, 36px);
+  margin-bottom: clamp(18px, 3vw, 28px);
+  padding-bottom: clamp(14px, 2vw, 20px);
+  border-bottom: 1px solid var(--hairline);
   animation: rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
@@ -191,15 +191,13 @@ button {
 .brand-mark {
   display: grid;
   place-items: center;
-  width: 54px;
-  height: 54px;
-  border-radius: 18px;
-  font-size: 26px;
-  color: #04121a;
-  background: linear-gradient(140deg, var(--aurora-teal), var(--aurora-cyan) 55%, var(--aurora-iris));
-  box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.18) inset,
-    0 14px 30px -12px var(--accent-glow);
+  width: 48px;
+  height: 48px;
+  border-radius: 0;
+  font-size: 22px;
+  color: #03111a;
+  background: linear-gradient(135deg, var(--aurora-teal) 0%, var(--aurora-cyan) 60%, var(--aurora-iris) 100%);
+  box-shadow: 0 0 0 1px rgba(56,189,248,0.3);
   position: relative;
 }
 
@@ -231,10 +229,10 @@ button {
   font-family: var(--font-display);
   font-optical-sizing: auto;
   font-weight: 500;
-  font-size: clamp(1.9rem, 5vw, 2.7rem);
+  font-size: clamp(1.7rem, 4vw, 2.4rem);
   line-height: 1;
-  letter-spacing: -0.01em;
-  background: linear-gradient(100deg, #ffffff 10%, #cfe4ff 45%, var(--aurora-iris) 90%);
+  letter-spacing: -0.03em;
+  background: linear-gradient(100deg, #fff 20%, #d0e8ff 55%, var(--aurora-iris) 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -244,16 +242,16 @@ button {
 .ghost-button {
   display: inline-flex;
   align-items: center;
-  gap: 9px;
-  padding: 11px 18px;
-  border-radius: var(--radius-pill);
-  font-size: 0.92rem;
+  gap: 8px;
+  padding: 9px 16px;
+  border-radius: var(--radius-md);
+  font-size: 0.88rem;
   font-weight: 500;
+  letter-spacing: 0.01em;
   color: var(--ink-soft);
   background: var(--surface);
   border: 1px solid var(--hairline);
-  backdrop-filter: blur(14px);
-  transition: transform 0.25s ease, border-color 0.25s ease, color 0.25s ease, box-shadow 0.25s ease;
+  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
 }
 
 .ghost-button .icon {
@@ -263,8 +261,7 @@ button {
 .ghost-button:hover:not(:disabled) {
   color: var(--ink);
   border-color: var(--hairline-bright);
-  transform: translateY(-2px);
-  box-shadow: 0 14px 30px -18px var(--accent-glow);
+  background: rgba(56,189,248,0.06);
 }
 
 .ghost-button:active:not(:disabled) {
@@ -280,17 +277,15 @@ button {
 .toolbar {
   display: flex;
   flex-wrap: wrap;
-  gap: 16px;
+  gap: 12px;
   align-items: center;
   justify-content: space-between;
-  padding: 14px;
-  margin-bottom: 18px;
-  border-radius: var(--radius-lg);
-  /* Keep backdrop-filter only on toolbar (important UI element, worth the cost) */
-  background: var(--surface-strong);
-  border: 1px solid var(--hairline);
-  backdrop-filter: blur(20px);
-  box-shadow: var(--shadow-card);
+  padding: 12px 0;
+  margin-bottom: 20px;
+  border-radius: 0;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--hairline);
   animation: rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.06s both;
 }
 
@@ -305,26 +300,23 @@ button {
 .crumb {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  padding: 8px 14px;
-  border-radius: var(--radius-pill);
-  font-size: 0.9rem;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: var(--radius-md);
+  font-size: 0.85rem;
   font-weight: 500;
-  color: var(--ink-soft);
+  color: var(--ink-faint);
   background: transparent;
-  border: 1px solid transparent;
-  transition: color 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+  border: 0;
+  transition: color 0.2s ease;
 }
 
 .crumb:hover {
-  color: var(--ink);
-  background: rgba(56, 189, 248, 0.1);
+  color: var(--ink-soft);
 }
 
 .crumb.is-current {
   color: var(--ink);
-  background: var(--surface-strong);
-  border-color: var(--hairline-bright);
 }
 
 .crumb-sep {
@@ -359,13 +351,14 @@ button {
 
 .search-input {
   width: 100%;
-  padding: 12px 18px 12px 44px;
-  border-radius: var(--radius-pill);
+  padding: 10px 16px 10px 42px;
+  border-radius: var(--radius-md);
   color: var(--ink);
   background: var(--slate);
   border: 1px solid var(--hairline);
   outline: none;
-  transition: border-color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
+  font-size: 0.9rem;
+  transition: border-color 0.2s ease, background 0.2s ease;
 }
 
 .search-input::placeholder {
@@ -373,9 +366,8 @@ button {
 }
 
 .search-input:focus {
-  border-color: var(--accent);
-  background: var(--night);
-  box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.16);
+  border-color: rgba(56,189,248,0.4);
+  background: rgba(56,189,248,0.03);
 }
 
 .search-field:focus-within .search-icon {
@@ -386,15 +378,16 @@ button {
 .status-card {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 13px 18px;
-  margin-bottom: 22px;
-  border-radius: var(--radius-md);
-  font-size: 0.92rem;
-  color: var(--ink-soft);
-  background: var(--surface);
-  border: 1px solid var(--hairline);
-  backdrop-filter: blur(14px);
+  gap: 10px;
+  padding: 10px 0;
+  margin-bottom: 20px;
+  border-radius: 0;
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+  color: var(--ink-faint);
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--hairline);
   animation: rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.12s both;
 }
 
@@ -426,36 +419,32 @@ button {
   display: flex;
   flex-direction: column;
   padding: 0;
-  border-radius: var(--radius-lg);
+  border-radius: 0;
   overflow: hidden;
   text-align: left;
   color: inherit;
-  /* Solid semi-transparent bg instead of backdrop-filter (was creating a compositing
-     layer per card — extremely expensive with 20+ cards visible at once) */
-  background: rgba(20, 26, 42, 0.88);
+  background: rgba(14, 18, 32, 0.95);
   border: 1px solid var(--hairline);
-  box-shadow: var(--shadow-card);
-  transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.32s ease, box-shadow 0.32s ease;
-  animation: card-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+  transition: border-color 0.2s ease, background 0.2s ease;
+  animation: card-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
   animation-delay: var(--stagger, 0ms);
   contain: layout style;
 }
 
 .card:hover {
-  transform: translateY(-6px);
-  border-color: var(--hairline-bright);
-  box-shadow: var(--shadow-float), 0 0 40px -22px var(--accent-glow);
+  border-color: rgba(56,189,248,0.25);
+  background: rgba(18, 24, 42, 0.98);
 }
 
 .card:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 3px;
+  outline: 1px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .thumb {
   position: relative;
-  aspect-ratio: 4 / 3;
-  background: linear-gradient(150deg, #18203a, #0d1322);
+  aspect-ratio: 16 / 10;
+  background: #090c18;
   overflow: hidden;
 }
 
@@ -464,7 +453,7 @@ button {
   height: 100%;
   object-fit: cover;
   display: block;
-  transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.4s ease;
+  transition: transform 0.4s ease, opacity 0.3s ease;
 }
 
 .thumb img[data-loaded="false"] {
@@ -481,16 +470,14 @@ button {
 }
 
 .card:hover .thumb img {
-  transform: scale(1.06);
+  transform: scale(1.04);
 }
 
 .placeholder {
   display: grid;
   place-items: center;
-  color: var(--aurora-cyan);
-  background:
-    radial-gradient(circle at 50% 38%, rgba(56, 189, 248, 0.16), transparent 60%),
-    linear-gradient(150deg, #18203a, #0d1322);
+  color: rgba(56,189,248,0.4);
+  background: #090c18;
 }
 
 .thumb-glyph {
@@ -534,30 +521,31 @@ button {
 /* Badge */
 .badge {
   position: absolute;
-  right: 10px;
-  top: 10px;
-  padding: 5px 11px;
-  border-radius: var(--radius-pill);
-  font-size: 0.66rem;
-  font-weight: 600;
-  letter-spacing: 0.1em;
+  right: 0;
+  top: 0;
+  padding: 3px 8px;
+  border-radius: 0;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--ink);
-  background: rgba(8, 12, 22, 0.72);
-  border: 1px solid var(--hairline-bright);
-  backdrop-filter: blur(8px);
+  background: rgba(8, 12, 22, 0.85);
+  border: 0;
+  border-left: 1px solid var(--hairline);
+  border-bottom: 1px solid var(--hairline);
 }
 
 .badge[data-type="image"] {
-  color: #062018;
-  background: linear-gradient(120deg, var(--aurora-teal), #7df0d6);
-  border-color: transparent;
+  color: rgba(46,230,196,0.9);
+  background: rgba(46,230,196,0.08);
+  border-color: rgba(46,230,196,0.2);
 }
 
 .badge[data-type="video"] {
-  color: #051426;
-  background: linear-gradient(120deg, var(--aurora-cyan), #8fd6ff);
-  border-color: transparent;
+  color: rgba(56,189,248,0.9);
+  background: rgba(56,189,248,0.08);
+  border-color: rgba(56,189,248,0.2);
 }
 
 /* Card body */
