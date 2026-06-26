@@ -21,7 +21,26 @@ const elements = {
   lightboxImage: document.getElementById("lightbox-image"),
   folderTemplate: document.getElementById("folder-card-template"),
   mediaTemplate: document.getElementById("media-card-template"),
-  fullscreenVideo: document.getElementById("fullscreen-video"),
+  player: document.getElementById("player"),
+  playerVideo: document.getElementById("player-video"),
+  playerTitle: document.getElementById("player-title"),
+  playerBack: document.getElementById("player-back"),
+  playerBigplay: document.getElementById("player-bigplay"),
+  playerSpinner: document.getElementById("player-spinner"),
+  playerTouch: document.getElementById("player-touch"),
+  rippleBack: document.getElementById("ripple-back"),
+  rippleFwd: document.getElementById("ripple-fwd"),
+  progress: document.getElementById("player-progress"),
+  progressBuffer: document.getElementById("progress-buffer"),
+  progressPlayed: document.getElementById("progress-played"),
+  ctrlPrev: document.getElementById("ctrl-prev"),
+  ctrlPlay: document.getElementById("ctrl-play"),
+  ctrlNext: document.getElementById("ctrl-next"),
+  ctrlMute: document.getElementById("ctrl-mute"),
+  ctrlVolume: document.getElementById("ctrl-volume"),
+  ctrlFullscreen: document.getElementById("ctrl-fullscreen"),
+  timeCurrent: document.getElementById("time-current"),
+  timeDuration: document.getElementById("time-duration"),
 };
 
 async function fetchJson(url) {
@@ -155,9 +174,14 @@ function createMediaCard(item, index) {
   }
 
   const image = node.querySelector("img");
+  const thumb = node.querySelector(".thumb");
   image.dataset.loaded = "false";
   image.addEventListener("load", () => {
     image.dataset.loaded = "true";
+    // Detect portrait thumbnails and flag the container
+    if (image.naturalHeight > image.naturalWidth) {
+      thumb.classList.add("is-portrait");
+    }
   });
   image.addEventListener("error", () => {
     image.dataset.loaded = "true";
@@ -186,11 +210,13 @@ function pushMediaHistory() {
 
 function teardownMediaUI() {
   tearingDownMedia = true;
-  const video = elements.fullscreenVideo;
+  const video = elements.playerVideo;
   video.pause();
-  video.style.display = "none";
   video.removeAttribute("src");
   video.load();
+  elements.player.hidden = true;
+  elements.player.classList.remove("is-playing", "is-idle");
+  stopIdleTimer();
   if (document.fullscreenElement) {
     document.exitFullscreen?.().catch(() => {});
   }
@@ -219,22 +245,137 @@ function openImage(item) {
   pushMediaHistory();
 }
 
+function videoIndices() {
+  return state.media.reduce((acc, item, index) => {
+    if (item.type === "video") acc.push(index);
+    return acc;
+  }, []);
+}
+
+function updateNavButtons() {
+  const order = videoIndices();
+  const pos = order.indexOf(state.currentVideoIndex);
+  elements.ctrlPrev.disabled = pos <= 0;
+  elements.ctrlNext.disabled = pos === -1 || pos >= order.length - 1;
+}
+
 async function openVideo(index) {
   const current = state.media[index];
-  if (!current) return;
+  if (!current || current.type !== "video") return;
   state.currentVideoIndex = index;
   pushMediaHistory();
-  const video = elements.fullscreenVideo;
+
+  const video = elements.playerVideo;
+  elements.player.hidden = false;
+  elements.player.classList.remove("is-playing");
+  elements.playerTitle.textContent = current.name;
+  elements.playerSpinner.hidden = false;
   video.src = current.streamUrl;
-  video.style.display = "block";
-  try {
-    if (video.requestFullscreen) {
-      await video.requestFullscreen();
-    }
-  } catch {}
+  video.load();
+  updateNavButtons();
+  setPlayIcon(false);
+  showControls();
+  kickIdleTimer();
+
   try {
     await video.play();
   } catch {}
+}
+
+function setPlayIcon(isPlaying) {
+  const useEl = elements.ctrlPlay.querySelector("use");
+  useEl.setAttribute("href", isPlaying ? "#ico-pause" : "#ico-play");
+  elements.ctrlPlay.dataset.mode = isPlaying ? "pause" : "play";
+  elements.ctrlPlay.setAttribute("aria-label", isPlaying ? "Pause" : "Play");
+}
+
+function setMuteIcon() {
+  const video = elements.playerVideo;
+  const muted = video.muted || video.volume === 0;
+  elements.ctrlMute.querySelector("use").setAttribute("href", muted ? "#ico-mute" : "#ico-volume");
+}
+
+function formatTime(seconds) {
+  if (!Number.isFinite(seconds)) return "0:00";
+  const total = Math.floor(seconds);
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  const mm = h > 0 ? String(m).padStart(2, "0") : String(m);
+  const ss = String(s).padStart(2, "0");
+  return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
+}
+
+function togglePlay() {
+  const video = elements.playerVideo;
+  if (video.paused) {
+    video.play().catch(() => {});
+  } else {
+    video.pause();
+  }
+}
+
+function seekBy(delta) {
+  const video = elements.playerVideo;
+  if (!Number.isFinite(video.duration)) return;
+  video.currentTime = Math.min(Math.max(0, video.currentTime + delta), video.duration);
+}
+
+function flashRipple(forward) {
+  const ripple = forward ? elements.rippleFwd : elements.rippleBack;
+  ripple.classList.remove("flash");
+  void ripple.offsetWidth;
+  ripple.classList.add("flash");
+}
+
+function lockOrientationToVideo() {
+  const video = elements.playerVideo;
+  if (!video.videoWidth || !video.videoHeight) return;
+  const target = video.videoHeight > video.videoWidth ? "portrait" : "landscape";
+  try {
+    screen.orientation?.lock?.(target).catch(() => {});
+  } catch {}
+}
+
+function unlockOrientation() {
+  try {
+    screen.orientation?.unlock?.();
+  } catch {}
+}
+
+async function toggleFullscreen() {
+  try {
+    if (document.fullscreenElement) {
+      await document.exitFullscreen();
+    } else {
+      await elements.player.requestFullscreen();
+      lockOrientationToVideo();
+    }
+  } catch {}
+}
+
+// ---- Auto-hide controls ----
+let idleTimer = null;
+
+function stopIdleTimer() {
+  if (idleTimer) {
+    clearTimeout(idleTimer);
+    idleTimer = null;
+  }
+}
+
+function showControls() {
+  elements.player.classList.remove("is-idle");
+}
+
+function kickIdleTimer() {
+  showControls();
+  stopIdleTimer();
+  idleTimer = setTimeout(() => {
+    if (!elements.playerVideo.paused) {
+      elements.player.classList.add("is-idle");
+    }
+  }, 2800);
 }
 
 function createSearchResultCard(item) {
@@ -283,12 +424,13 @@ function renderBrowser() {
   });
 }
 
-function renderPlayer() {}
-
 function stepVideo(delta) {
-  const nextIndex = state.currentVideoIndex + delta;
-  if (nextIndex < 0 || nextIndex >= state.media.length) return;
-  openVideo(nextIndex);
+  const order = videoIndices();
+  const pos = order.indexOf(state.currentVideoIndex);
+  if (pos === -1) return;
+  const nextPos = pos + delta;
+  if (nextPos < 0 || nextPos >= order.length) return;
+  openVideo(order[nextPos]);
 }
 
 async function searchEntries(queryText) {
@@ -363,11 +505,182 @@ elements.lightbox.addEventListener("click", (event) => {
 // Fires for the ✕ button, ESC, and programmatic close.
 elements.lightbox.addEventListener("close", () => requestCloseMedia());
 
-elements.fullscreenVideo.addEventListener("ended", () => stepVideo(1));
-document.addEventListener("fullscreenchange", () => {
-  if (!document.fullscreenElement && elements.fullscreenVideo.style.display !== "none") {
-    requestCloseMedia();
+// ---- Player wiring ----
+const video = elements.playerVideo;
+
+video.addEventListener("play", () => {
+  elements.player.classList.add("is-playing");
+  setPlayIcon(true);
+  kickIdleTimer();
+});
+video.addEventListener("pause", () => {
+  elements.player.classList.remove("is-playing");
+  setPlayIcon(false);
+  showControls();
+  stopIdleTimer();
+});
+video.addEventListener("waiting", () => {
+  elements.playerSpinner.hidden = false;
+});
+video.addEventListener("playing", () => {
+  elements.playerSpinner.hidden = true;
+});
+video.addEventListener("canplay", () => {
+  elements.playerSpinner.hidden = true;
+});
+video.addEventListener("loadedmetadata", () => {
+  elements.timeDuration.textContent = formatTime(video.duration);
+});
+video.addEventListener("timeupdate", () => {
+  if (scrubbing) return;
+  const ratio = video.duration ? video.currentTime / video.duration : 0;
+  elements.progressPlayed.style.width = `${ratio * 100}%`;
+  elements.timeCurrent.textContent = formatTime(video.currentTime);
+});
+video.addEventListener("progress", () => {
+  if (!video.buffered.length || !video.duration) return;
+  const end = video.buffered.end(video.buffered.length - 1);
+  elements.progressBuffer.style.width = `${(end / video.duration) * 100}%`;
+});
+video.addEventListener("volumechange", () => {
+  elements.ctrlVolume.value = video.muted ? 0 : video.volume;
+  setMuteIcon();
+});
+video.addEventListener("ended", () => stepVideo(1));
+
+elements.ctrlPlay.addEventListener("click", togglePlay);
+elements.playerBigplay.addEventListener("click", togglePlay);
+elements.ctrlPrev.addEventListener("click", () => stepVideo(-1));
+elements.ctrlNext.addEventListener("click", () => stepVideo(1));
+elements.playerBack.addEventListener("click", () => requestCloseMedia());
+elements.ctrlFullscreen.addEventListener("click", toggleFullscreen);
+
+elements.ctrlMute.addEventListener("click", () => {
+  video.muted = !video.muted;
+});
+elements.ctrlVolume.addEventListener("input", (event) => {
+  const value = Number(event.target.value);
+  video.volume = value;
+  video.muted = value === 0;
+});
+
+// Tap to toggle controls / play; double-tap sides to seek.
+let lastTap = 0;
+let tapTimer = null;
+elements.playerTouch.addEventListener("click", (event) => {
+  const now = Date.now();
+  const rect = elements.playerTouch.getBoundingClientRect();
+  const forward = event.clientX - rect.left > rect.width / 2;
+
+  if (now - lastTap < 300) {
+    clearTimeout(tapTimer);
+    lastTap = 0;
+    seekBy(forward ? 10 : -10);
+    flashRipple(forward);
+    kickIdleTimer();
+    return;
   }
+
+  lastTap = now;
+  tapTimer = setTimeout(() => {
+    if (elements.player.classList.contains("is-idle")) {
+      kickIdleTimer();
+    } else if (video.paused) {
+      togglePlay();
+    } else {
+      elements.player.classList.add("is-idle");
+    }
+  }, 280);
+});
+
+elements.player.addEventListener("mousemove", () => kickIdleTimer());
+
+// Scrubbing
+let scrubbing = false;
+
+function seekFromPointer(clientX) {
+  const rect = elements.progress.getBoundingClientRect();
+  const ratio = Math.min(Math.max(0, (clientX - rect.left) / rect.width), 1);
+  if (Number.isFinite(video.duration)) {
+    elements.progressPlayed.style.width = `${ratio * 100}%`;
+    elements.timeCurrent.textContent = formatTime(ratio * video.duration);
+    return ratio;
+  }
+  return null;
+}
+
+elements.progress.addEventListener("pointerdown", (event) => {
+  scrubbing = true;
+  elements.progress.classList.add("is-scrubbing");
+  elements.progress.setPointerCapture(event.pointerId);
+  seekFromPointer(event.clientX);
+  showControls();
+});
+elements.progress.addEventListener("pointermove", (event) => {
+  if (scrubbing) seekFromPointer(event.clientX);
+});
+elements.progress.addEventListener("pointerup", (event) => {
+  if (!scrubbing) return;
+  scrubbing = false;
+  elements.progress.classList.remove("is-scrubbing");
+  const ratio = seekFromPointer(event.clientX);
+  if (ratio !== null) video.currentTime = ratio * video.duration;
+  kickIdleTimer();
+});
+
+// Keyboard shortcuts (desktop)
+document.addEventListener("keydown", (event) => {
+  if (elements.player.hidden) return;
+  if (event.target instanceof HTMLInputElement) return;
+  switch (event.key) {
+    case " ":
+    case "k":
+      event.preventDefault();
+      togglePlay();
+      break;
+    case "ArrowRight":
+      seekBy(5);
+      flashRipple(true);
+      kickIdleTimer();
+      break;
+    case "ArrowLeft":
+      seekBy(-5);
+      flashRipple(false);
+      kickIdleTimer();
+      break;
+    case "ArrowUp":
+      event.preventDefault();
+      video.volume = Math.min(1, video.volume + 0.1);
+      video.muted = false;
+      break;
+    case "ArrowDown":
+      event.preventDefault();
+      video.volume = Math.max(0, video.volume - 0.1);
+      break;
+    case "m":
+      video.muted = !video.muted;
+      break;
+    case "f":
+      toggleFullscreen();
+      break;
+    case "n":
+      stepVideo(1);
+      break;
+    case "p":
+      stepVideo(-1);
+      break;
+    case "Escape":
+      if (!document.fullscreenElement) requestCloseMedia();
+      break;
+    default:
+      break;
+  }
+});
+
+document.addEventListener("fullscreenchange", () => {
+  const useEl = elements.ctrlFullscreen.querySelector("use");
+  useEl.setAttribute("href", document.fullscreenElement ? "#ico-compress" : "#ico-expand");
+  if (!document.fullscreenElement) unlockOrientation();
 });
 
 window.addEventListener("popstate", (event) => {

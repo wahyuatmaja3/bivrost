@@ -220,7 +220,7 @@ function installRoutes(state: AppState) {
 
       const contentType = mime.lookup(filePath) || "application/octet-stream";
       res.type(contentType);
-      fs.createReadStream(filePath).pipe(res);
+      fs.createReadStream(filePath).on("error", () => { if (!res.headersSent) res.status(404).end(); }).pipe(res);
     } catch {
       res.status(404).end();
     }
@@ -238,8 +238,12 @@ function installRoutes(state: AppState) {
 
       const cacheKey = createCacheKey(relativePath);
       const thumbnailPath = await ensureVideoThumbnail(filePath, cacheKey);
+      // Verify the generated thumbnail actually exists before streaming
+      await fsp.access(thumbnailPath, fs.constants.F_OK);
       res.type("image/jpeg");
-      fs.createReadStream(thumbnailPath).pipe(res);
+      fs.createReadStream(thumbnailPath)
+        .on("error", () => { if (!res.headersSent) res.status(404).end(); })
+        .pipe(res);
     } catch {
       res.status(404).end();
     }
@@ -266,7 +270,7 @@ function installRoutes(state: AppState) {
           "Content-Type": contentType,
           "Accept-Ranges": "bytes",
         });
-        fs.createReadStream(filePath).pipe(res);
+        fs.createReadStream(filePath).on("error", () => { if (!res.headersSent) res.status(404).end(); }).pipe(res);
         return;
       }
 
@@ -288,7 +292,7 @@ function installRoutes(state: AppState) {
         "Content-Type": contentType,
       });
 
-      fs.createReadStream(filePath, { start, end }).pipe(res);
+      fs.createReadStream(filePath, { start, end }).on("error", () => { if (!res.headersSent) res.status(404).end(); }).pipe(res);
     } catch {
       res.status(404).end();
     }

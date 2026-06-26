@@ -188,7 +188,8 @@ function installRoutes(state) {
             }
             const contentType = mime_types_1.default.lookup(filePath) || "application/octet-stream";
             res.type(contentType);
-            node_fs_1.default.createReadStream(filePath).pipe(res);
+            node_fs_1.default.createReadStream(filePath).on("error", () => { if (!res.headersSent)
+                res.status(404).end(); }).pipe(res);
         }
         catch {
             res.status(404).end();
@@ -205,8 +206,13 @@ function installRoutes(state) {
             }
             const cacheKey = createCacheKey(relativePath);
             const thumbnailPath = await ensureVideoThumbnail(filePath, cacheKey);
+            // Verify the generated thumbnail actually exists before streaming
+            await promises_1.default.access(thumbnailPath, node_fs_1.default.constants.F_OK);
             res.type("image/jpeg");
-            node_fs_1.default.createReadStream(thumbnailPath).pipe(res);
+            node_fs_1.default.createReadStream(thumbnailPath)
+                .on("error", () => { if (!res.headersSent)
+                res.status(404).end(); })
+                .pipe(res);
         }
         catch {
             res.status(404).end();
@@ -231,7 +237,8 @@ function installRoutes(state) {
                     "Content-Type": contentType,
                     "Accept-Ranges": "bytes",
                 });
-                node_fs_1.default.createReadStream(filePath).pipe(res);
+                node_fs_1.default.createReadStream(filePath).on("error", () => { if (!res.headersSent)
+                    res.status(404).end(); }).pipe(res);
                 return;
             }
             const [startText, endText] = range.replace(/bytes=/, "").split("-");
@@ -249,7 +256,8 @@ function installRoutes(state) {
                 "Content-Length": chunkSize,
                 "Content-Type": contentType,
             });
-            node_fs_1.default.createReadStream(filePath, { start, end }).pipe(res);
+            node_fs_1.default.createReadStream(filePath, { start, end }).on("error", () => { if (!res.headersSent)
+                res.status(404).end(); }).pipe(res);
         }
         catch {
             res.status(404).end();

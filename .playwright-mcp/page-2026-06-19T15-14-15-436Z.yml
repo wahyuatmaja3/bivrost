@@ -1,0 +1,66 @@
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - generic [ref=e4]:
+      - img [ref=e6]
+      - generic [ref=e8]:
+        - paragraph [ref=e9]: Self-hosted media bridge
+        - heading "Bivröst" [level=1] [ref=e10]
+    - button "Up a level" [disabled] [ref=e11]:
+      - img [ref=e12]
+      - generic [ref=e14]: Up a level
+  - generic [ref=e15]:
+    - navigation "Breadcrumb" [ref=e16]:
+      - button "test-media" [ref=e17] [cursor=pointer]:
+        - img [ref=e18]
+        - generic [ref=e20]: test-media
+    - generic [ref=e21]:
+      - img
+      - searchbox "Search this folder…" [ref=e22]
+  - main [ref=e23]:
+    - generic [ref=e26]: 2 folders · 3 media items
+    - generic [ref=e27]:
+      - button "Photos Folder" [ref=e28] [cursor=pointer]:
+        - img [ref=e30]
+        - generic [ref=e32]:
+          - heading "Photos" [level=2] [ref=e33]
+          - paragraph [ref=e34]:
+            - img [ref=e35]
+            - generic [ref=e37]: Folder
+      - button "Videos Folder" [ref=e38] [cursor=pointer]:
+        - img [ref=e40]
+        - generic [ref=e42]:
+          - heading "Videos" [level=2] [ref=e43]
+          - paragraph [ref=e44]:
+            - img [ref=e45]
+            - generic [ref=e47]: Folder
+      - button "aurora.jpg image aurora.jpg JPG" [ref=e48] [cursor=pointer]:
+        - generic [ref=e49]:
+          - img "aurora.jpg" [ref=e50]
+          - generic [ref=e51]: image
+        - generic [ref=e52]:
+          - heading "aurora.jpg" [level=2] [ref=e53]
+          - paragraph [ref=e54]:
+            - img [ref=e55]
+            - generic [ref=e57]: JPG
+      - button "mountain.webp image mountain.webp WEBP" [ref=e58] [cursor=pointer]:
+        - generic [ref=e59]:
+          - img "mountain.webp" [ref=e60]
+          - generic [ref=e61]: image
+        - generic [ref=e62]:
+          - heading "mountain.webp" [level=2] [ref=e63]
+          - paragraph [ref=e64]:
+            - img [ref=e65]
+            - generic [ref=e67]: WEBP
+      - button "sample-clip.mp4 video sample-clip.mp4 MP4" [ref=e68] [cursor=pointer]:
+        - generic [ref=e69]:
+          - img "sample-clip.mp4" [ref=e70]
+          - img [ref=e72]
+          - generic [ref=e74]: video
+        - generic [ref=e75]:
+          - heading "sample-clip.mp4" [level=2] [ref=e76]
+          - paragraph [ref=e77]:
+            - img [ref=e78]
+            - generic [ref=e80]: MP4
+  - contentinfo [ref=e81]:
+    - generic [ref=e82]: Bivröst
+    - generic [ref=e84]: streaming your collection across the bridge
