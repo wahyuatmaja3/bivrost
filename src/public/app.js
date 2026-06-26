@@ -540,3 +540,58 @@ window.addEventListener("popstate", (e) => {
 const initialPath = new URLSearchParams(location.search).get("path") || "";
 loadDirectory(initialPath, { pushHistory: false });
 history.replaceState({ path: initialPath }, "", location.href);
+
+// ---- Custom Cursor ----
+const cursorDot = document.getElementById("cursor-dot");
+const cursorOutline = document.getElementById("cursor-outline");
+
+let mouseX = window.innerWidth / 2;
+let mouseY = window.innerHeight / 2;
+let outlineX = mouseX;
+let outlineY = mouseY;
+
+window.addEventListener("mousemove", (e) => {
+  mouseX = e.clientX;
+  mouseY = e.clientY;
+  
+  // Instant follow for dot
+  if (cursorDot) {
+    cursorDot.style.left = `${mouseX}px`;
+    cursorDot.style.top = `${mouseY}px`;
+  }
+});
+
+function animateCursor() {
+  const diffX = mouseX - outlineX;
+  const diffY = mouseY - outlineY;
+  
+  // Lerp for smooth trailing effect
+  outlineX += diffX * 0.2;
+  outlineY += diffY * 0.2;
+  
+  if (cursorOutline) {
+    cursorOutline.style.left = `${outlineX}px`;
+    cursorOutline.style.top = `${outlineY}px`;
+  }
+  
+  requestAnimationFrame(animateCursor);
+}
+requestAnimationFrame(animateCursor);
+
+// Hover states for interactive elements
+function initCursorHover() {
+  const interactiveSelectors = 'a, button, input, [role="button"], .card, .thumb, .icon-button, .lightbox-nav-btn, .crumb';
+  
+  document.addEventListener('mouseover', (e) => {
+    if (e.target.closest(interactiveSelectors)) {
+      document.body.classList.add('cursor-hover');
+    }
+  });
+  
+  document.addEventListener('mouseout', (e) => {
+    if (e.target.closest(interactiveSelectors)) {
+      document.body.classList.remove('cursor-hover');
+    }
+  });
+}
+initCursorHover();
