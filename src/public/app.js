@@ -449,6 +449,52 @@ elements.lbClose.addEventListener("click", () => requestCloseMedia());
 elements.lbPrev.addEventListener("click", () => stepImage(-1));
 elements.lbNext.addEventListener("click", () => stepImage(1));
 
+// ---- Lightbox swipe / drag gesture ----
+const SWIPE_THRESHOLD = 50; // px
+let swipeStartX = null;
+let swipeStartY = null;
+let isDragging = false;
+
+function handleSwipeStart(x, y) {
+  swipeStartX = x;
+  swipeStartY = y;
+  isDragging = true;
+}
+
+function handleSwipeEnd(x, y) {
+  if (!isDragging || swipeStartX === null) return;
+  isDragging = false;
+  const dx = x - swipeStartX;
+  const dy = y - swipeStartY;
+  swipeStartX = null;
+  swipeStartY = null;
+  // Only trigger if horizontal movement dominates and exceeds threshold
+  if (Math.abs(dx) < SWIPE_THRESHOLD || Math.abs(dx) < Math.abs(dy)) return;
+  if (dx < 0) stepImage(1);   // swipe left → next
+  else stepImage(-1);         // swipe right → prev
+}
+
+// Touch
+const lbBody = elements.lightbox.querySelector(".lightbox-body");
+lbBody.addEventListener("touchstart", (e) => {
+  const t = e.touches[0];
+  handleSwipeStart(t.clientX, t.clientY);
+}, { passive: true });
+lbBody.addEventListener("touchend", (e) => {
+  const t = e.changedTouches[0];
+  handleSwipeEnd(t.clientX, t.clientY);
+});
+
+// Mouse drag
+lbBody.addEventListener("mousedown", (e) => {
+  if (e.button !== 0) return;
+  handleSwipeStart(e.clientX, e.clientY);
+});
+lbBody.addEventListener("mouseup", (e) => {
+  handleSwipeEnd(e.clientX, e.clientY);
+});
+lbBody.addEventListener("mouseleave", () => { isDragging = false; swipeStartX = null; });
+
 elements.playerBack.addEventListener("click", () => requestCloseMedia());
 elements.ctrlPrev.addEventListener("click", () => stepVideo(-1));
 elements.ctrlNext.addEventListener("click", () => stepVideo(1));

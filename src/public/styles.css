@@ -734,6 +734,13 @@ button {
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.lightbox-body:active {
+  cursor: grabbing;
 }
 
 .lightbox-body img {

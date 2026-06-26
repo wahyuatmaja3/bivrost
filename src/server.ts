@@ -28,8 +28,11 @@ if (ffmpegStatic) {
 app.use(compression());
 app.use(cors());
 
-// Static files: cache for 1 hour on browser, revalidate
-const STATIC_OPTS = { maxAge: "1h", etag: true, lastModified: true };
+// App files (HTML/JS/CSS): no-cache so browsers always revalidate via ETag.
+// ETag makes unchanged files return 304 with no body — still fast.
+const STATIC_OPTS = { maxAge: 0, etag: true, lastModified: true, setHeaders(res: import("http").ServerResponse) {
+  res.setHeader("Cache-Control", "no-cache");
+}};
 app.use(express.static(PUBLIC_DIR, STATIC_OPTS));
 app.use("/plyr", express.static(
   path.resolve(__dirname, "..", "node_modules", "plyr", "dist"),
