@@ -3,6 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+const compression_1 = __importDefault(require("compression"));
 const cors_1 = __importDefault(require("cors"));
 const express_1 = __importDefault(require("express"));
 const fluent_ffmpeg_1 = __importDefault(require("fluent-ffmpeg"));
@@ -25,9 +26,12 @@ const ALLOWED_EXTENSIONS = new Set([...VIDEO_EXTENSIONS, ...IMAGE_EXTENSIONS]);
 if (ffmpeg_static_1.default) {
     fluent_ffmpeg_1.default.setFfmpegPath(ffmpeg_static_1.default);
 }
+app.use((0, compression_1.default)());
 app.use((0, cors_1.default)());
-app.use(express_1.default.static(PUBLIC_DIR));
-app.use("/plyr", express_1.default.static(node_path_1.default.resolve(__dirname, "..", "node_modules", "plyr", "dist")));
+// Static files: cache for 1 hour on browser, revalidate
+const STATIC_OPTS = { maxAge: "1h", etag: true, lastModified: true };
+app.use(express_1.default.static(PUBLIC_DIR, STATIC_OPTS));
+app.use("/plyr", express_1.default.static(node_path_1.default.resolve(__dirname, "..", "node_modules", "plyr", "dist"), { maxAge: "7d", immutable: true }));
 function normalizeRelativePath(relativePath) {
     return relativePath.replace(/\\/g, "/").split("/").filter(Boolean).join("/");
 }
@@ -206,10 +210,19 @@ function installRoutes(state) {
                 return;
             }
             const cacheKey = createCacheKey(relativePath);
+            // Return 304 Not Modified if client already has this thumbnail cached
+            const etag = `"${cacheKey}"`;
+            if (req.headers["if-none-match"] === etag) {
+                res.status(304).end();
+                return;
+            }
             const thumbnailPath = await ensureVideoThumbnail(filePath, cacheKey);
-            // Verify the generated thumbnail actually exists before streaming
             await promises_1.default.access(thumbnailPath, node_fs_1.default.constants.F_OK);
-            res.type("image/jpeg");
+            res.set({
+                "Content-Type": "image/jpeg",
+                "Cache-Control": "public, max-age=604800, immutable", // 7 days
+                "ETag": etag,
+            });
             node_fs_1.default.createReadStream(thumbnailPath)
                 .on("error", () => { if (!res.headersSent)
                 res.status(404).end(); })

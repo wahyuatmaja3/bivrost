@@ -20,6 +20,8 @@
   },
   "homepage": "https://github.com/wahyuatmaja3/bivrost#readme",
   "dependencies": {
+    "@types/compression": "^1.8.1",
+    "compression": "^1.8.1",
     "cors": "^2.8.6",
     "express": "^5.2.1",
     "ffmpeg-static": "^5.3.0",

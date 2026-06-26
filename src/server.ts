@@ -1,3 +1,4 @@
+import compression from "compression";
 import cors from "cors";
 import express from "express";
 import ffmpeg from "fluent-ffmpeg";
@@ -24,9 +25,16 @@ if (ffmpegStatic) {
   ffmpeg.setFfmpegPath(ffmpegStatic);
 }
 
+app.use(compression());
 app.use(cors());
-app.use(express.static(PUBLIC_DIR));
-app.use("/plyr", express.static(path.resolve(__dirname, "..", "node_modules", "plyr", "dist")));
+
+// Static files: cache for 1 hour on browser, revalidate
+const STATIC_OPTS = { maxAge: "1h", etag: true, lastModified: true };
+app.use(express.static(PUBLIC_DIR, STATIC_OPTS));
+app.use("/plyr", express.static(
+  path.resolve(__dirname, "..", "node_modules", "plyr", "dist"),
+  { maxAge: "7d", immutable: true }
+));
 
 function normalizeRelativePath(relativePath: string) {
   return relativePath.replace(/\\/g, "/").split("/").filter(Boolean).join("/");
@@ -238,10 +246,21 @@ function installRoutes(state: AppState) {
       }
 
       const cacheKey = createCacheKey(relativePath);
+
+      // Return 304 Not Modified if client already has this thumbnail cached
+      const etag = `"${cacheKey}"`;
+      if (req.headers["if-none-match"] === etag) {
+        res.status(304).end();
+        return;
+      }
+
       const thumbnailPath = await ensureVideoThumbnail(filePath, cacheKey);
-      // Verify the generated thumbnail actually exists before streaming
       await fsp.access(thumbnailPath, fs.constants.F_OK);
-      res.type("image/jpeg");
+      res.set({
+        "Content-Type": "image/jpeg",
+        "Cache-Control": "public, max-age=604800, immutable", // 7 days
+        "ETag": etag,
+      });
       fs.createReadStream(thumbnailPath)
         .on("error", () => { if (!res.headersSent) res.status(404).end(); })
         .pipe(res);

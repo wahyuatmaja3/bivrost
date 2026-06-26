@@ -72,8 +72,11 @@ body {
   inset: -20vh -10vw;
   z-index: -2;
   pointer-events: none;
-  filter: blur(60px) saturate(135%);
-  opacity: 0.85;
+  /* Reduced blur from 60px → 20px: huge GPU savings, still looks great */
+  filter: blur(20px) saturate(130%);
+  opacity: 0.8;
+  contain: strict;
+  will-change: filter;
 }
 
 .aurora-band {
@@ -85,7 +88,7 @@ body {
   border-radius: 50%;
   mix-blend-mode: screen;
   opacity: 0.55;
-  will-change: transform, opacity;
+  will-change: transform;
 }
 
 .aurora-band--1 {
@@ -166,6 +169,7 @@ button {
   width: min(100%, 1180px);
   margin: 0 auto;
   padding: clamp(20px, 4vw, 40px) clamp(16px, 4vw, 36px) 48px;
+  contain: layout;
 }
 
 /* ---------- Topbar / brand ---------- */
@@ -282,7 +286,8 @@ button {
   padding: 14px;
   margin-bottom: 18px;
   border-radius: var(--radius-lg);
-  background: var(--surface);
+  /* Keep backdrop-filter only on toolbar (important UI element, worth the cost) */
+  background: var(--surface-strong);
   border: 1px solid var(--hairline);
   backdrop-filter: blur(20px);
   box-shadow: var(--shadow-card);
@@ -414,6 +419,7 @@ button {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
   gap: clamp(14px, 2vw, 20px);
+  contain: layout;
 }
 
 .card {
@@ -424,13 +430,15 @@ button {
   overflow: hidden;
   text-align: left;
   color: inherit;
-  background: var(--surface);
+  /* Solid semi-transparent bg instead of backdrop-filter (was creating a compositing
+     layer per card — extremely expensive with 20+ cards visible at once) */
+  background: rgba(20, 26, 42, 0.88);
   border: 1px solid var(--hairline);
-  backdrop-filter: blur(12px);
   box-shadow: var(--shadow-card);
   transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.32s ease, box-shadow 0.32s ease;
   animation: card-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
   animation-delay: var(--stagger, 0ms);
+  contain: layout style;
 }
 
 .card:hover {
