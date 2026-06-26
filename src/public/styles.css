@@ -688,14 +688,17 @@ button {
 /* ---------- Lightbox ---------- */
 .lightbox {
   width: min(94vw, 980px);
-  max-height: 92vh;
-  padding: 16px;
+  max-height: 94vh;
+  padding: 14px;
   border: 1px solid var(--hairline-bright);
   border-radius: var(--radius-xl);
   background: var(--surface-strong);
   backdrop-filter: blur(26px);
   box-shadow: var(--shadow-float);
   color: var(--ink);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .lightbox[open] {
@@ -703,15 +706,102 @@ button {
 }
 
 .lightbox::backdrop {
-  background: rgba(3, 5, 11, 0.78);
+  background: rgba(3, 5, 11, 0.82);
   backdrop-filter: blur(6px);
 }
 
-.lightbox-close-row {
+/* Header: prev + counter + spacer + close */
+.lightbox-header {
   display: flex;
-  justify-content: flex-end;
-  margin-bottom: 12px;
+  align-items: center;
+  gap: 10px;
+  flex: none;
 }
+
+.lightbox-counter {
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-faint);
+  letter-spacing: 0.06em;
+  min-width: 48px;
+}
+
+/* Body: image */
+.lightbox-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.lightbox-body img {
+  max-width: 100%;
+  max-height: 75vh;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  display: block;
+  border-radius: var(--radius-lg);
+  transition: opacity 0.2s ease;
+}
+
+.lightbox-body img.is-loading {
+  opacity: 0;
+}
+
+/* Footer: filename + next */
+.lightbox-footer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: none;
+}
+
+.lightbox-filename {
+  flex: 1;
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Nav buttons (prev / next) */
+.lightbox-nav-btn {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border-radius: 50%;
+  border: 1px solid var(--hairline);
+  font-size: 1.1rem;
+  color: var(--ink-soft);
+  background: var(--slate);
+  cursor: pointer;
+  transition: transform 0.2s ease, color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+
+.lightbox-nav-btn:hover:not(:disabled) {
+  color: var(--ink);
+  border-color: var(--hairline-bright);
+  background: rgba(56, 189, 248, 0.12);
+  transform: scale(1.08);
+}
+
+.lightbox-nav-btn:active:not(:disabled) {
+  transform: scale(0.94);
+}
+
+.lightbox-nav-btn:disabled {
+  opacity: 0.28;
+  cursor: not-allowed;
+}
+
+/* #lb-next uses ico-chevron which points right — good as-is */
 
 .icon-button {
   display: grid;
@@ -723,6 +813,7 @@ button {
   color: var(--ink-soft);
   background: var(--slate);
   border: 1px solid var(--hairline);
+  cursor: pointer;
   transition: transform 0.2s ease, color 0.2s ease, border-color 0.2s ease;
 }
 
@@ -730,15 +821,6 @@ button {
   color: var(--ink);
   border-color: var(--hairline-bright);
   transform: rotate(90deg);
-}
-
-.lightbox img {
-  width: 100%;
-  height: auto;
-  max-height: 78vh;
-  object-fit: contain;
-  display: block;
-  border-radius: var(--radius-lg);
 }
 
 /* ---------- Plyr-based video player ---------- */

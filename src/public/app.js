@@ -5,6 +5,7 @@ const state = {
   folders: [],
   media: [],
   currentVideoIndex: -1,
+  currentImageIndex: -1,
   searchQuery: "",
   searchResults: [],
 };
@@ -19,6 +20,11 @@ const elements = {
   searchInput: document.getElementById("search-input"),
   lightbox: document.getElementById("lightbox"),
   lightboxImage: document.getElementById("lightbox-image"),
+  lbPrev: document.getElementById("lb-prev"),
+  lbNext: document.getElementById("lb-next"),
+  lbClose: document.getElementById("lb-close"),
+  lbCounter: document.getElementById("lb-counter"),
+  lbFilename: document.getElementById("lb-filename"),
   folderTemplate: document.getElementById("folder-card-template"),
   mediaTemplate: document.getElementById("media-card-template"),
   player: document.getElementById("player"),
@@ -237,17 +243,57 @@ function createMediaCard(item, index) {
   image.alt = item.name;
 
   node.addEventListener("click", () => {
-    if (item.type === "image") { openImage(item); return; }
+    if (item.type === "image") { openImage(index); return; }
     openVideo(index);
   });
   return node;
 }
 
-function openImage(item) {
+// ---- Image lightbox ----
+function imageIndices() {
+  return state.media.reduce((acc, item, i) => {
+    if (item.type === "image") acc.push(i);
+    return acc;
+  }, []);
+}
+
+function updateImageNavButtons() {
+  const order = imageIndices();
+  const pos = order.indexOf(state.currentImageIndex);
+  const total = order.length;
+  elements.lbPrev.disabled = pos <= 0;
+  elements.lbNext.disabled = pos === -1 || pos >= total - 1;
+  elements.lbCounter.textContent = total > 1 ? `${pos + 1} / ${total}` : "";
+}
+
+function openImage(index) {
+  const item = state.media[index];
+  if (!item || item.type !== "image") return;
+  state.currentImageIndex = index;
+
+  // Fade out → swap src → fade in
+  elements.lightboxImage.classList.add("is-loading");
+  elements.lightboxImage.onload = () => elements.lightboxImage.classList.remove("is-loading");
+  elements.lightboxImage.onerror = () => elements.lightboxImage.classList.remove("is-loading");
   elements.lightboxImage.src = item.streamUrl;
   elements.lightboxImage.alt = item.name;
-  elements.lightbox.showModal();
-  pushMediaHistory();
+
+  if (elements.lbFilename) elements.lbFilename.textContent = item.name;
+  updateImageNavButtons();
+
+  if (!elements.lightbox.open) {
+    elements.lightbox.showModal();
+    pushMediaHistory();
+  }
+}
+
+function stepImage(delta) {
+  const order = imageIndices();
+  const pos = order.indexOf(state.currentImageIndex);
+  if (pos === -1) return;
+  const next = pos + delta;
+  if (next < 0 || next >= order.length) return;
+  openImage(order[next]);
 }
 
 // ---- Video player ----
@@ -399,21 +445,37 @@ elements.lightbox.addEventListener("click", (e) => {
   if (!inside) requestCloseMedia();
 });
 elements.lightbox.addEventListener("close", () => requestCloseMedia());
+elements.lbClose.addEventListener("click", () => requestCloseMedia());
+elements.lbPrev.addEventListener("click", () => stepImage(-1));
+elements.lbNext.addEventListener("click", () => stepImage(1));
 
 elements.playerBack.addEventListener("click", () => requestCloseMedia());
 elements.ctrlPrev.addEventListener("click", () => stepVideo(-1));
 elements.ctrlNext.addEventListener("click", () => stepVideo(1));
 
-// Global keyboard (Escape to close, N/P for prev/next)
+// Global keyboard shortcuts
 document.addEventListener("keydown", (e) => {
-  if (elements.player.hidden) return;
   if (e.target instanceof HTMLInputElement) return;
-  switch (e.key) {
-    case "Escape":
-      if (!document.fullscreenElement) requestCloseMedia();
-      break;
-    case "n": stepVideo(1); break;
-    case "p": stepVideo(-1); break;
+
+  // Lightbox image navigation
+  if (elements.lightbox.open) {
+    switch (e.key) {
+      case "ArrowLeft": stepImage(-1); break;
+      case "ArrowRight": stepImage(1); break;
+      case "Escape": requestCloseMedia(); break;
+    }
+    return;
+  }
+
+  // Video player shortcuts
+  if (!elements.player.hidden) {
+    switch (e.key) {
+      case "Escape":
+        if (!document.fullscreenElement) requestCloseMedia();
+        break;
+      case "n": stepVideo(1); break;
+      case "p": stepVideo(-1); break;
+    }
   }
 });
 

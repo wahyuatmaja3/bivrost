@@ -128,12 +128,25 @@
     </div>
 
     <dialog id="lightbox" class="lightbox">
-      <form method="dialog" class="lightbox-close-row">
-        <button class="icon-button" aria-label="Close preview">
+      <div class="lightbox-header">
+        <button class="lightbox-nav-btn" id="lb-prev" type="button" aria-label="Previous image">
+          <svg class="icon"><use href="#ico-back" /></svg>
+        </button>
+        <span class="lightbox-counter" id="lb-counter"></span>
+        <div style="flex:1"></div>
+        <button class="icon-button" id="lb-close" aria-label="Close preview">
           <svg class="icon"><use href="#ico-close" /></svg>
         </button>
-      </form>
-      <img id="lightbox-image" alt="Image preview" />
+      </div>
+      <div class="lightbox-body">
+        <img id="lightbox-image" alt="Image preview" />
+      </div>
+      <div class="lightbox-footer">
+        <p class="lightbox-filename" id="lb-filename"></p>
+        <button class="lightbox-nav-btn" id="lb-next" type="button" aria-label="Next image">
+          <svg class="icon"><use href="#ico-chevron" /></svg>
+        </button>
+      </div>
     </dialog>
 
     <template id="folder-card-template">
